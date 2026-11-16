@@ -735,10 +735,19 @@ void susfs_set_log(bool enabled) {
 #ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
 static char *fake_cmdline_or_bootconfig = NULL;
 void susfs_set_cmdline_or_bootconfig(void __user **user_info) {
-	struct st_susfs_spoof_cmdline_or_bootconfig info;
+	struct st_susfs_spoof_cmdline_or_bootconfig *info;
+	int err = 0;
 
-	if (copy_from_user(&info, *user_info, sizeof(info))) {
+	info = kmalloc(sizeof(*info), GFP_KERNEL);
+	if (!info) {
+		err = -ENOMEM;
+		copy_to_user(&((struct st_susfs_spoof_cmdline_or_bootconfig __user*)*user_info)->err, &err, sizeof(err));
+		return;
+	}
+
+	if (copy_from_user(info, *user_info, sizeof(*info))) {
 		SUSFS_LOGE("failed copying from userspace\n");
+		kfree(info);
 		return;
 	}
 
@@ -746,21 +755,22 @@ void susfs_set_cmdline_or_bootconfig(void __user **user_info) {
 		fake_cmdline_or_bootconfig = kmalloc(SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE, GFP_KERNEL);
 		if (!fake_cmdline_or_bootconfig) {
 			SUSFS_LOGE("no enough memory\n");
-			info.err = -ENOMEM;
+			info->err = -ENOMEM;
 			goto out_copy;
 		}
 	}
 
 	spin_lock(&susfs_spin_lock);
 	memset(fake_cmdline_or_bootconfig, 0, SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE);
-	strncpy(fake_cmdline_or_bootconfig, info.fake_cmdline_or_bootconfig, SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE-1);
+	strncpy(fake_cmdline_or_bootconfig, info->fake_cmdline_or_bootconfig, SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE-1);
 	spin_unlock(&susfs_spin_lock);
 
 	SUSFS_LOGI("fake_cmdline_or_bootconfig is set, length of string: %zu\n", strlen(fake_cmdline_or_bootconfig));
-	info.err = 0;
+	info->err = 0;
 
 out_copy:
-	copy_to_user(&((struct st_susfs_spoof_cmdline_or_bootconfig __user*)*user_info)->err, &info.err, sizeof(info.err));
+	copy_to_user(&((struct st_susfs_spoof_cmdline_or_bootconfig __user*)*user_info)->err, &info->err, sizeof(info->err));
+	kfree(info);
 }
 
 int susfs_spoof_cmdline_or_bootconfig(struct seq_file *m) {
@@ -1011,9 +1021,14 @@ void susfs_show_variant(void __user **user_info) {
 }
 
 void susfs_get_enabled_features(void __user **user_info) {
-	struct st_susfs_enabled_features info;
-	memset(&info, 0, sizeof(info));
-	snprintf(info.enabled_features, sizeof(info.enabled_features),
+	struct st_susfs_enabled_features *info;
+
+	info = kmalloc(sizeof(*info), GFP_KERNEL);
+	if (!info)
+		return;
+
+	memset(info, 0, sizeof(*info));
+	snprintf(info->enabled_features, sizeof(info->enabled_features),
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 		"CONFIG_KSU_SUSFS_SUS_PATH\n"
 #endif
@@ -1054,8 +1069,9 @@ void susfs_get_enabled_features(void __user **user_info) {
 		"CONFIG_KSU_SUSFS_SUS_SU\n"
 #endif
 		"");
-	info.err = 0;
-	copy_to_user(*user_info, &info, sizeof(info));
+	info->err = 0;
+	copy_to_user(*user_info, info, sizeof(*info));
+	kfree(info);
 }
 
 void susfs_enable_log(void __user **user_info) {
