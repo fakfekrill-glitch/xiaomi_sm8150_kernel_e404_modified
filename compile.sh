@@ -180,7 +180,7 @@ zipbuild() {
     local BPF_SUFFIX=$([[ "$TARGET" == "VAYBPF" ]] && echo "-BPF" || echo "")
     ZIP_NAME="RE404-POCO_X3_PRO-$(date "+%y%m%d-%H%M")${BPF_SUFFIX}.zip"
     rm -f "$AK3_DIR"/*dtbo*
-    zip -r9 "$BASE_DIR/$ZIP_NAME" META-INF/ tools/ anykernel.sh Image dtb "${TARGET}"*-Image "${TARGET}"*-dtb
+    zip -r9 "$BASE_DIR/$ZIP_NAME" META-INF/ tools/ anykernel.sh banner* Image dtb "${TARGET}"*-Image "${TARGET}"*-dtb
     cd "$KERNEL_DIR" || exit 1
 }
 
