@@ -95,10 +95,10 @@ esac
         ["vaybpf"]="VAYBPF:vayu-bpf_defconfig"
     )
 
-for device in "${!DEVICE_MAP[@]}"; do
-    if [[ "$*" == *"$device"* ]]; then
-        IFS=':' read -r TARGET DEFCONFIG <<< "${DEVICE_MAP[$device]}"
-        sed -i "/devicename=/c\devicename=${device}" "$AK3_DIR/anykernel.sh"
+for arg in "$@"; do
+    if [[ -n "${DEVICE_MAP[$arg]}" ]]; then
+        IFS=':' read -r TARGET DEFCONFIG <<< "${DEVICE_MAP[$arg]}"
+        sed -i "/devicename=/c\devicename=vayu" "$AK3_DIR/anykernel.sh"
         break
     fi
 done
