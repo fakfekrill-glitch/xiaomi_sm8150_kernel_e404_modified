@@ -123,6 +123,14 @@ else
     export CHATID=""
 fi
 
+# Define dummy notification functions if not defined by TELEGRAM_CONFIG
+if ! declare -f send_msg >/dev/null 2>&1; then
+    send_msg() { :; }
+fi
+if ! declare -f send_file >/dev/null 2>&1; then
+    send_file() { :; }
+fi
+
 # Build environment
 export ARCH="arm64"
 export SUBARCH="arm64"
