@@ -179,7 +179,7 @@ zipbuild() {
     cd "$AK3_DIR" || exit 1
     local BPF_SUFFIX=$([[ "$TARGET" == "VAYBPF" ]] && echo "-BPF" || echo "")
     ZIP_NAME="RE404-POCO_X3_PRO-$(date "+%y%m%d-%H%M")${BPF_SUFFIX}.zip"
-    zip -r9 "$BASE_DIR/$ZIP_NAME" META-INF/ tools/ "${TARGET}"*-Image "${TARGET}"*-dtbo.img "${TARGET}"*-dtb anykernel.sh
+    zip -r9 "$BASE_DIR/$ZIP_NAME" META-INF/ tools/ anykernel.sh Image dtbo.img dtb "${TARGET}"*-Image "${TARGET}"*-dtbo.img "${TARGET}"*-dtb
     cd "$KERNEL_DIR" || exit 1
 }
 
@@ -288,11 +288,15 @@ makebuild() {
     fi
 
     echo "-- Copying files to AnyKernel3 --"
-    rm -f "$AK3_DIR/${TARGET}-Image"
-    rm -f "$AK3_DIR/${TARGET}-dtbo.img"
+    rm -f "$AK3_DIR/${TARGET}-Image" "$AK3_DIR/Image"
+    rm -f "$AK3_DIR/${TARGET}-dtbo.img" "$AK3_DIR/dtbo.img"
+    rm -f "$AK3_DIR/${TARGET}-dtb" "$AK3_DIR/dtb"
     cp "$K_IMG" "$AK3_DIR/${TARGET}-Image"
+    cp "$K_IMG" "$AK3_DIR/Image"
     cp "$K_DTBO" "$AK3_DIR/${TARGET}-dtbo.img"
+    cp "$K_DTBO" "$AK3_DIR/dtbo.img"
     cp "$K_DTB" "$AK3_DIR/${TARGET}-dtb"
+    cp "$K_DTB" "$AK3_DIR/dtb"
 
 }
 
