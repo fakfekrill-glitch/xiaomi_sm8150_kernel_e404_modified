@@ -178,8 +178,12 @@ zipbuild() {
 
 setupbuild() {
     if [[ $TC == *Clang* ]]; then
+        CC_CMD="clang"
+        if command -v ccache >/dev/null 2>&1; then
+            CC_CMD="ccache clang"
+        fi
         BUILD_FLAGS=(
-            CC="ccache clang"
+            CC="$CC_CMD"
             CROSS_COMPILE="aarch64-linux-gnu-"
             CROSS_COMPILE_ARM32="arm-linux-gnueabi-"
             LLVM=1
@@ -268,10 +272,12 @@ makebuild() {
 
     compilebuild
     # Show ccache stats after build
-    echo "======== CCache Stats =========="
-    ccache -p | grep cache_dir
-    ccache -s
-    echo "================================"
+    if command -v ccache >/dev/null 2>&1; then
+        echo "======== CCache Stats =========="
+        ccache -p | grep cache_dir || true
+        ccache -s || true
+        echo "================================"
+    fi
 
     echo "-- Copying files to AnyKernel3 --"
     rm -f "$AK3_DIR/${TARGET}-Image"
