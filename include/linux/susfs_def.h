@@ -24,9 +24,52 @@
 #define CMD_SUSFS_SHOW_SUS_SU_WORKING_MODE 0x555e4
 #define CMD_SUSFS_IS_SUS_SU_READY 0x555f0
 #define CMD_SUSFS_SUS_SU 0x60000
+#define CMD_SUSFS_ADD_SUS_PATH_LOOP 0x55553
+#define CMD_SUSFS_SET_SUS_PATH_UID_FILTER 0x55554
+#define CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS 0x55561
+#define CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING 0x60010
+#define CMD_SUSFS_ADD_SUS_MAP 0x60020
 
 #define SUSFS_MAX_LEN_PATHNAME 256 // 256 should address many paths already unless you are doing some strange experimental stuff, then set your own desired length
 #define SUSFS_FAKE_CMDLINE_OR_BOOTCONFIG_SIZE 4096
+#define SUSFS_ENABLED_FEATURES_SIZE 8192
+#define SUSFS_MAX_VERSION_BUFSIZE 16
+#define SUSFS_MAX_VARIANT_BUFSIZE 16
+
+struct st_susfs_enabled_features {
+	char                    enabled_features[SUSFS_ENABLED_FEATURES_SIZE];
+	int                     err;
+};
+
+struct st_susfs_variant {
+	char                    susfs_variant[SUSFS_MAX_VARIANT_BUFSIZE];
+	int                     err;
+};
+
+struct st_susfs_version {
+	char                    susfs_version[SUSFS_MAX_VERSION_BUFSIZE];
+	int                     err;
+};
+
+struct st_susfs_log {
+	bool                    enabled;
+	int                     err;
+};
+
+struct st_susfs_hide_sus_mnts_for_non_su_procs {
+	bool                    enabled;
+	int                     err;
+};
+
+struct st_susfs_avc_log_spoofing {
+	bool                    enabled;
+	int                     err;
+};
+
+struct st_susfs_sus_map {
+	char                    target_pathname[SUSFS_MAX_LEN_PATHNAME];
+	int                     err;
+};
 
 #define TRY_UMOUNT_DEFAULT 0 /* used by susfs_try_umount() */
 #define TRY_UMOUNT_DETACH 1 /* used by susfs_try_umount() */
@@ -58,5 +101,54 @@
 #define DATA_ADB_NO_AUTO_ADD_SUS_BIND_MOUNT "/data/adb/susfs_no_auto_add_sus_bind_mount"
 #define DATA_ADB_NO_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT "/data/adb/susfs_no_auto_add_sus_ksu_default_mount"
 #define DATA_ADB_NO_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT "/data/adb/susfs_no_auto_add_try_umount_for_bind_mount"
+
+#define TIF_PROC_UMOUNTED 33
+#define TIF_PROC_NO_SU 34
+#define TIF_PROC_UMOUNTED_FOR_ZYGOTE_NEXT 35
+
+static inline bool susfs_is_current_app_uid(void) {
+	return ((current_uid().val % 100000) >= 10000);
+}
+
+static inline bool susfs_is_current_proc_umounted(void) {
+	return (likely(test_thread_flag(TIF_PROC_UMOUNTED)));
+}
+
+static inline void susfs_set_current_proc_umounted(void) {
+	set_thread_flag(TIF_PROC_UMOUNTED);
+}
+
+static inline void susfs_clear_current_proc_umounted(void) {
+	clear_thread_flag(TIF_PROC_UMOUNTED);
+}
+
+static inline bool susfs_is_current_proc_umounted_for_zygote_next(void) {
+	return (likely(test_thread_flag(TIF_PROC_UMOUNTED_FOR_ZYGOTE_NEXT)));
+}
+
+static inline void susfs_set_current_proc_umounted_for_zygote_next(void) {
+	set_thread_flag(TIF_PROC_UMOUNTED_FOR_ZYGOTE_NEXT);
+}
+
+static inline void susfs_clear_current_proc_umounted_for_zygote_next(void) {
+	clear_thread_flag(TIF_PROC_UMOUNTED_FOR_ZYGOTE_NEXT);
+}
+
+static inline bool susfs_is_current_proc_umounted_app(void) {
+	return (likely(test_thread_flag(TIF_PROC_UMOUNTED)) &&
+			current_uid().val >= 10000);
+}
+
+static inline bool susfs_is_current_proc_no_su(void) {
+	return (likely(test_thread_flag(TIF_PROC_NO_SU)));
+}
+
+static inline void susfs_set_current_proc_no_su(void) {
+	set_thread_flag(TIF_PROC_NO_SU);
+}
+
+static inline void susfs_clear_current_proc_no_su(void) {
+	clear_thread_flag(TIF_PROC_NO_SU);
+}
 
 #endif // #ifndef KSU_SUSFS_DEF_H
