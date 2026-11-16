@@ -2,6 +2,8 @@
 #define KSU_SUSFS_DEF_H
 
 #include <linux/bits.h>
+#include <linux/cred.h>
+#include <linux/thread_info.h>
 
 /********/
 /* ENUM */
