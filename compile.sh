@@ -137,7 +137,7 @@ export SUBARCH="arm64"
 export TZ="Asia/Jakarta"
 
 # Clean previous builds
-rm -rf ../*RE404*.zip
+# rm -rf ../*RE404*.zip
 
 # Function definitions
 build_msg() {
@@ -177,8 +177,28 @@ clearbuild() {
 zipbuild() {
     echo "-- Zipping Kernel --"
     cd "$AK3_DIR" || exit 1
-    local BPF_SUFFIX=$([[ "$TARGET" == "VAYBPF" ]] && echo "-BPF" || echo "")
-    ZIP_NAME="RE404-POCO_X3_PRO-$(date "+%y%m%d-%H%M")${BPF_SUFFIX}.zip"
+    if [[ "$TARGET" == "VAYBPF" ]]; then
+        ZIP_NAME="RE404-VAYU-ResukiSU-SuSFS-BPF.zip"
+        cat << 'EOF' > banner
+=================================================
+             E404 CUSTOM KERNEL
+       POCO X3 Pro (vayu / bhima)
+     ReSukiSU + SuSFS v1.5.5 + eBPF
+   Compiled by: Dalu Raziq Hidayatullah
+=================================================
+EOF
+    else
+        ZIP_NAME="RE404-VAYU-ResukiSU-SuSFS-NON-BPF.zip"
+        cat << 'EOF' > banner
+=================================================
+             E404 CUSTOM KERNEL
+       POCO X3 Pro (vayu / bhima)
+   ReSukiSU + SuSFS v1.5.5 (Non-BPF)
+   Compiled by: Dalu Raziq Hidayatullah
+=================================================
+EOF
+    fi
+    rm -f "$BASE_DIR/$ZIP_NAME"
     rm -f "$AK3_DIR"/*dtbo*
     zip -r9 "$BASE_DIR/$ZIP_NAME" META-INF/ tools/ anykernel.sh banner* Image dtb "${TARGET}"*-Image "${TARGET}"*-dtb
     cd "$KERNEL_DIR" || exit 1
