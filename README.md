@@ -74,6 +74,21 @@
 
 ---
 
+## 📸 Verification & Proof (BakaSU, SuSFS & M-Banking)
+
+Here is proof of the kernel running with **BakaSU v4.2.0-rc3**, **SuSFS v1.5.5**, and passing M-Banking security checks on POCO X3 Pro (crDroid 12.13 / Android 16):
+
+<div align="center">
+  <img src="media/bakasu_susfs_proof.png" alt="BakaSU + SuSFS Proof" width="360" />
+  <br /><br />
+  <a href="https://github.com/fakfekrill-glitch/xiaomi_sm8150_kernel_e404_modified/releases/download/R3-SuSFS-v1.5.5/E404-BakaSU-SuSFS-MBanking-Proof.mp4">
+    <img src="https://img.shields.io/badge/▶_Watch_Video_Proof-M--Banking_Working_&_Bypass-success?style=for-the-badge&logo=youtube" alt="Watch Proof Video" />
+  </a>
+  <p><i>Click badge above to play/download the video demonstration (.mp4)</i></p>
+</div>
+
+---
+
 ## 📦 Kernel Variants & Flashing Guide
 
 We provide 2 distinct flashable variants:
