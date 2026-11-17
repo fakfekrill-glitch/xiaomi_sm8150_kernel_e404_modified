@@ -10,9 +10,18 @@
 
 ---
 
-## 👨‍💻 Maintainer & Credits
-- **Compiled & Maintained by**: [Dalu Raziq Hidayatullah](https://github.com/fakfekrill-glitch)
-- **Base Source**: [deutereium/xiaomi_sm8150_kernel_e404 (Release R3)](https://github.com/deutereium/xiaomi_sm8150_kernel_e404)
+## 👨‍💻 Maintainer & Contacts
+- **Compiled & Maintained by**: **Dalu Raziq Hidayatullah** ([@fakfekrill-glitch](https://github.com/fakfekrill-glitch))
+- **Base Source**: [@deutereium](https://github.com/deutereium) ([xiaomi_sm8150_kernel_e404 Release R3](https://github.com/deutereium/xiaomi_sm8150_kernel_e404))
+
+### 📬 Socials & Contact
+[![Telegram](https://img.shields.io/badge/Telegram-@PushyAja-blue?logo=telegram)](https://t.me/PushyAja)
+[![Instagram](https://img.shields.io/badge/Instagram-dalu.hidayatullah-E4405F?logo=instagram)](https://instagram.com/dalu.hidayatullah)
+[![Discord](https://img.shields.io/badge/Discord-pushygamertag27-5865F2?logo=discord)](https://discord.com)
+
+- **Telegram**: [@PushyAja](https://t.me/PushyAja)
+- **Instagram**: [@dalu.hidayatullah](https://instagram.com/dalu.hidayatullah)
+- **Discord**: `pushygamertag27`
 
 ---
 
@@ -29,7 +38,7 @@
 
 ## ⚡ Features & Changelog
 
-### 🚀 E404 Base R3 Highlights (by deutereium)
+### 🚀 E404 Base R3 Highlights (by @deutereium)
 - **Android 17 Native Support**:
   - Backport 5.15 Android Binder IPC.
   - Backport `clone3()` syscall.
@@ -102,13 +111,13 @@ cd kernel
 ---
 
 ## 📜 Credits & Acknowledgments
-- [deutereium](https://github.com/deutereium) for original E404 kernel source & R3 backports
+- [@deutereium](https://github.com/deutereium) for original E404 kernel source & R3 backports
 - [Baka-SU / ReSukiSU Team](https://github.com/Baka-SU)
 - [simonpunk](https://gitlab.com/simonpunk/susfs4ksu) for SuSFS
 - [tiann](https://github.com/tiann) for KernelSU
 - [osm0sis](https://github.com/osm0sis) for AnyKernel3
 - [dakkshesh07](https://github.com/dakkshesh07) for Neutron Clang toolchain
-- **Dalu Raziq Hidayatullah** (`fakfekrill-glitch`) for porting, debugging non-GKI 4.14 SuSFS fixes, and packaging.
+- **Dalu Raziq Hidayatullah** ([@fakfekrill-glitch](https://github.com/fakfekrill-glitch)) for porting, debugging non-GKI 4.14 SuSFS fixes, and packaging.
 
 ---
 **License**: [GPL-2.0](LICENSE)
