@@ -4,7 +4,7 @@
 ![Device](https://img.shields.io/badge/Device-POCO%20X3%20Pro%20(vayu%2Fbhima)-blue)
 ![SoC](https://img.shields.io/badge/SoC-Snapdragon%20860%20(SM8150--AC)-orange)
 ![Kernel](https://img.shields.io/badge/Kernel-Linux%204.14.356-green)
-![Android](https://img.shields.io/badge/Android-12%20--%2016%20(Tested%20on%20crDroid%2012.13)-purple)
+![Android](https://img.shields.io/badge/Android-12%20--%2017%2B%20(Tested%20on%20crDroid%2012.13)-purple)
 ![Root](https://img.shields.io/badge/Root-BakaSU%20%2B%20SuSFS%20v1.5.5-red)
 
 ---
@@ -21,7 +21,7 @@
 - **Linux Kernel Base**: `4.14.356`
 - **Supported ROMs**:
   - Fully tested, booted, and verified on **crDroid 12.13 (Android 16)**.
-  - Compatible with Android 12, 13, 14, 15, and 16 AOSP-based custom ROMs.
+  - Compatible with Android 12, 13, 14, 15, 16, and upcoming Android 17 (Baklava) AOSP-based custom ROMs.
 
 ---
 
@@ -45,10 +45,10 @@
 - **Clean Inode & Retval Hooks**:
   - Cleaned up duplicate `fstat` counts and ensured no-op returns for `ksu_handle_newfstat_ret` under SuSFS.
 
-### 3. Networking & Android 16 Subsystems
+### 3. Networking & Android 16/17 Subsystems
 - **Extended Berkeley Packet Filter (eBPF)**:
   - Enabled `CONFIG_BPF_SYSCALL`, `CONFIG_NET_CLS_ACT`, `CONFIG_NET_SCH_INGRESS`, and `CONFIG_CGROUP_BPF`.
-  - Native support for modern Android 15 & 16 network telemetry, tethering hardware offload, and BPF maps without requiring unstable uname spoofing.
+  - Native support for modern Android 15, 16, and 17+ network telemetry, tethering hardware offload, and BPF maps without requiring unstable uname spoofing.
 
 ### 4. Compiler & Optimization
 - **Toolchain**: Neutron Clang 19 with ThinLTO (Link Time Optimization)
