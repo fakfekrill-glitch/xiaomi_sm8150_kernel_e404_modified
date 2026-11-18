@@ -18,7 +18,7 @@ int early_dtbo_type = 2;
 int early_dtbo_type = 1;
 #endif
 bool early_dtbo_130 = 0;
-bool early_batt_profile = 0;
+bool early_batt_profile = 1;
 
 int early_lyb_override = 0;
 bool early_lyb_pressure = false;
@@ -30,7 +30,7 @@ struct e404_attributes e404_data = {
     .effcpu                     = 0,
     .rom_type                   = 1,
     .dtbo_type                  = 0,
-    .batt_profile               = 0,
+    .batt_profile               = 1,
     .kgsl_skip_zeroing          = 0,
     .file_sync                  = 1,
     .panel_width                = 70,
@@ -189,7 +189,7 @@ static struct kobj_attribute name##_attr = __ATTR(name, 0664, name##_show, name#
 E404_ATTR_RO(effcpu);
 E404_ATTR_RO(rom_type);
 E404_ATTR_RO(dtbo_type);
-E404_ATTR_RO(batt_profile);
+E404_ATTR_RW(batt_profile);
 E404_ATTR_RO(panel_width);
 E404_ATTR_RO(panel_height);
 E404_ATTR_RW(kgsl_skip_zeroing);
@@ -201,6 +201,7 @@ static struct attribute *e404_attrs[] = {
     &file_sync_attr.attr,
     &bg_blocklist_attr.attr,
     &fas_attr.attr,
+    &batt_profile_attr.attr,
     NULL,
 };
 
