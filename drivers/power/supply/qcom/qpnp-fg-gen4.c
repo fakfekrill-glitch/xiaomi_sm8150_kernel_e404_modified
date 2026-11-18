@@ -253,6 +253,7 @@ struct fg_dt_props {
 	bool	soc_scale_mode;
 	bool	shutdown_delay_enable;
 	bool	vayu_6000mah_profile;
+	bool	vayu_6500mah_profile;
 	int	*dec_rate_seq;
 	int	dec_rate_len;
 	int	cutoff_volt_mv;
@@ -1819,8 +1820,15 @@ static int fg_gen4_get_batt_profile(struct fg_dev *fg)
 #ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 		profile_node = ERR_PTR(-ENXIO);
 #ifdef CONFIG_E404_ATTRIBUTES
-		/* force 6000mAh aftermarket profile if user opted in */
-		if (e404_data.batt_profile && chip->dt.vayu_6000mah_profile
+		/* force 6000mAh/6500mAh aftermarket profile if user opted in */
+		if (e404_data.batt_profile == 2 && !fg->profile_already_find) {
+			pr_alert("E404: forcing vayu_6500mah profile\n");
+			fg->profile_already_find = true;
+			retry_batt_profile = BATT_PROFILE_RETRY_COUNT_MAX;
+			profile_node = of_batterydata_get_best_profile(batt_node,
+						fg->batt_id_ohms / 1000,
+						"vayu_6500mah");
+		} else if (e404_data.batt_profile && chip->dt.vayu_6000mah_profile
 				&& !fg->profile_already_find) {
 			pr_alert("E404: forcing vayu_6000mah profile\n");
 			fg->profile_already_find = true;
@@ -5108,11 +5116,23 @@ static int fg_psy_get_property(struct power_supply *psy,
 		pval->intval = chip->cl->init_cap_uah;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
+#ifdef CONFIG_E404_ATTRIBUTES
+		if (e404_data.batt_capacity_mah > 0) {
+			pval->intval = e404_data.batt_capacity_mah * 1000;
+			break;
+		}
+#endif
 		rc = fg_gen4_get_learned_capacity(chip, &temp);
 		if (!rc)
 			pval->intval = (int)temp;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
+#ifdef CONFIG_E404_ATTRIBUTES
+		if (e404_data.batt_capacity_mah > 0) {
+			pval->intval = e404_data.batt_capacity_mah * 1000;
+			break;
+		}
+#endif
 		if (-EINVAL != fg->bp.nom_cap_uah) {
 			pval->intval = fg->bp.nom_cap_uah * 1000;
 		} else {
@@ -6811,6 +6831,8 @@ static int fg_gen4_parse_dt(struct fg_gen4_chip *chip)
 	chip->dt.soc_hi_res = of_property_read_bool(node, "qcom,soc-hi-res");
 	chip->dt.vayu_6000mah_profile = of_property_read_bool(node,
 					"qcom,vayu-6000mah-profile");
+	chip->dt.vayu_6500mah_profile = of_property_read_bool(node,
+					"qcom,vayu-6500mah-profile");
 
 	chip->dt.sys_min_volt_mv = DEFAULT_SYS_MIN_VOLT_MV;
 	of_property_read_u32(node, "qcom,fg-sys-min-voltage",

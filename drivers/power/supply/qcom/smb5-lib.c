@@ -3110,19 +3110,8 @@ int smblib_get_prop_battery_slowly_charging(struct smb_charger *chg,
 int smblib_set_prop_battery_slowly_charging(struct smb_charger *chg,
 					const union power_supply_propval *val)
 {
-	if (val->intval ^ chg->slowly_charging) {
-		if (val->intval) {
-			vote(chg->fcc_votable, SLOWLY_CHARGING_VOTER,
-							true, SLOWLY_CHARGING_CURRENT);
-		} else {
-
-			vote(chg->fcc_votable, SLOWLY_CHARGING_VOTER, false, 0);
-		}
-		chg->slowly_charging = (bool)val->intval;
-		rerun_election(chg->fcc_votable);
-		pr_info("slowly charging enabled[%d]\n", val->intval);
-	}
-
+	chg->slowly_charging = false;
+	vote(chg->fcc_votable, SLOWLY_CHARGING_VOTER, false, 0);
 	return 0;
 }
 
@@ -3648,6 +3637,12 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 
 	if (val->intval > chg->thermal_levels)
 		return -EINVAL;
+
+	if (force_fast_charge) {
+		vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
+		vote(chg->usb_icl_votable, THERMAL_DAEMON_VOTER, false, 0);
+		return 0;
+	}
 
 	chg->system_temp_level = val->intval;
 
@@ -7152,6 +7147,8 @@ void smblib_usb_plugin_hard_reset_locked(struct smb_charger *chg)
 		/* Remove FCC_STEPPER 1.5A init vote to allow FCC ramp up */
 		if (chg->fcc_stepper_enable)
 			vote(chg->fcc_votable, FCC_STEPPER_VOTER, false, 0);
+
+		fast_charge_reapply_if_enabled();
 		if (chg->six_pin_step_charge_enable)
 			smblib_get_start_vbat_before_step_charge(chg);
 	} else {
@@ -7246,6 +7243,8 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		/* Remove FCC_STEPPER 1.5A init vote to allow FCC ramp up */
 		if (chg->fcc_stepper_enable)
 			vote(chg->fcc_votable, FCC_STEPPER_VOTER, false, 0);
+
+		fast_charge_reapply_if_enabled();
 
 		if (chg->six_pin_step_charge_enable)
 			smblib_get_start_vbat_before_step_charge(chg);

@@ -17,7 +17,8 @@ struct e404_attributes {
     bool effcpu;
     int rom_type;
     int dtbo_type;
-    bool batt_profile;
+    int batt_profile;
+    int batt_capacity_mah;
     bool kgsl_skip_zeroing;
     bool file_sync;
     int panel_width;
@@ -34,6 +35,8 @@ extern bool early_effcpu;
 extern int early_rom_type;
 extern int early_dtbo_type;
 extern bool early_dtbo_130;
+extern int early_batt_profile;
+extern int early_batt_capacity_mah;
 
 extern int early_lyb_override;
 extern bool early_lyb_pressure;

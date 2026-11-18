@@ -1971,7 +1971,7 @@ static void pl_config_init(struct pl_data *chip, int smb_version)
 	}
 }
 
-#define DEFAULT_RESTRICTED_CURRENT_UA	1000000
+#define DEFAULT_RESTRICTED_CURRENT_UA	6000000
 int qcom_batt_init(struct charger_param *chg_param)
 {
 	struct pl_data *chip;

@@ -227,20 +227,8 @@ static bool qc3_disable_cp_by_jeita_status(void)
 
 static int qc3_check_slowly_charging_enabled(void)
 {
-	int ret;
-	struct power_supply *psy;
-	union power_supply_propval val = {0,};
-
-	psy = cp_get_sw_psy();
-	if (!psy)
-		return false;
-
-	ret = power_supply_get_property(psy,
-			POWER_SUPPLY_PROP_SLOWLY_CHARGING, &val);
-	if (!ret)
-		pm_state.slowly_charging = !!val.intval;
-
-	return ret;
+	pm_state.slowly_charging = false;
+	return 0;
 }
 
 static void cp_get_batt_capacity(void)

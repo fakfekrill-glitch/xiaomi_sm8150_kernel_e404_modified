@@ -127,25 +127,8 @@ static void usbpd_check_bms_psy(struct usbpd_pm *pdpm)
 /* get thermal level from battery power supply property */
 static int pd_get_batt_current_thermal_level(struct usbpd_pm *pdpm, int *level)
 {
-	union power_supply_propval pval = {0,};
-	int rc = 0;
-
-	usbpd_check_batt_psy(pdpm);
-
-	if (!pdpm->sw_psy)
-		return -ENODEV;
-
-	rc = power_supply_get_property(pdpm->sw_psy,
-				POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT, &pval);
-	if (rc < 0) {
-		pr_info("Couldn't get fastcharge mode:%d\n", rc);
-		return rc;
-	}
-
-	pr_debug("pval.intval: %d\n", pval.intval);
-
-	*level = pval.intval;
-	return rc;
+	*level = 0;
+	return 0;
 }
 
 static int pd_get_batt_capacity(struct usbpd_pm *pdpm, int *capacity)
@@ -604,22 +587,8 @@ static int usbpd_pm_enable_sw(struct usbpd_pm *pdpm, bool enable)
 
 static int usbpd_pm_check_slowly_charging_enabled(struct usbpd_pm *pdpm)
 {
-	int ret;
-	union power_supply_propval val = {0,};
-
-	if (!pdpm->sw_psy) {
-		pdpm->sw_psy = power_supply_get_by_name("battery");
-		if (!pdpm->sw_psy) {
-			return -ENODEV;
-		}
-	}
-
-	ret = power_supply_get_property(pdpm->sw_psy,
-			POWER_SUPPLY_PROP_SLOWLY_CHARGING, &val);
-	if (!ret)
-		pdpm->sw.slowly_charging = !!val.intval;
-
-	return ret;
+	pdpm->sw.slowly_charging = false;
+	return 0;
 }
 
 static int usbpd_pm_limit_sw(struct usbpd_pm *pdpm, bool enable)

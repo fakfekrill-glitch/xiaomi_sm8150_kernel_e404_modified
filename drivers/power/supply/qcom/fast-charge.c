@@ -9,43 +9,75 @@
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
 #include <linux/init.h>
+#include <linux/workqueue.h>
+#include <linux/delay.h>
 #include <linux/pmic-voter.h>
 
 #define FAST_CHARGE_VOTER		"FAST_CHARGE_VOTER"
 #define THERMAL_DAEMON_VOTER		"THERMAL_DAEMON_VOTER"
 #define RESTRICT_CHG_VOTER		"RESTRICT_CHG_VOTER"
 
-#define FAST_CHARGE_ICL_UA		6000000
+#define FAST_CHARGE_ICL_UA		3000000
 #define FAST_CHARGE_FCC_UA		6000000
 
 static struct kobject *fast_charge_kobj;
-static int force_fast_charge;
+int force_fast_charge = 1;
+EXPORT_SYMBOL_GPL(force_fast_charge);
 
-static void fast_charge_apply(bool enable)
+static struct delayed_work fast_charge_work;
+
+void fast_charge_apply(bool enable)
 {
 	struct votable *fcc_votable     = find_votable("FCC");
 	struct votable *usb_icl_votable = find_votable("USB_ICL");
 
 	if (enable) {
 		if (fcc_votable) {
-			vote(fcc_votable, FAST_CHARGE_VOTER, true,
-			     FAST_CHARGE_FCC_UA);
+			vote_override(fcc_votable, FAST_CHARGE_VOTER, true,
+			              FAST_CHARGE_FCC_UA);
 			vote(fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
 			vote(fcc_votable, RESTRICT_CHG_VOTER, false, 0);
+			vote(fcc_votable, "SLOWLY_CHARGING_VOTER", false, 0);
+			vote(fcc_votable, "BATT_VERIFY_VOTER", false, 0);
 		}
-		if (usb_icl_votable)
-			vote(usb_icl_votable, FAST_CHARGE_VOTER, true,
-			     FAST_CHARGE_ICL_UA);
+		if (usb_icl_votable) {
+			vote_override(usb_icl_votable, FAST_CHARGE_VOTER, true,
+			              FAST_CHARGE_ICL_UA);
+			vote(usb_icl_votable, THERMAL_DAEMON_VOTER, false, 0);
+		}
 
-		pr_info("fast_charge: enabled — FCC/ICL set to 6A\n");
+		pr_info("fast_charge: enabled — FCC overridden to 6A, ICL to 3A\n");
 	} else {
 		if (fcc_votable)
-			vote(fcc_votable, FAST_CHARGE_VOTER, false, 0);
+			vote_override(fcc_votable, FAST_CHARGE_VOTER, false, 0);
 		if (usb_icl_votable)
-			vote(usb_icl_votable, FAST_CHARGE_VOTER, false, 0);
+			vote_override(usb_icl_votable, FAST_CHARGE_VOTER, false, 0);
 
 		pr_info("fast_charge: disabled\n");
 	}
+}
+EXPORT_SYMBOL_GPL(fast_charge_apply);
+
+void fast_charge_reapply_if_enabled(void)
+{
+	if (force_fast_charge)
+		fast_charge_apply(true);
+}
+EXPORT_SYMBOL_GPL(fast_charge_reapply_if_enabled);
+
+static void fast_charge_work_fn(struct work_struct *work)
+{
+	struct votable *fcc_votable     = find_votable("FCC");
+	struct votable *usb_icl_votable = find_votable("USB_ICL");
+	static int retry_cnt = 0;
+
+	if ((!fcc_votable || !usb_icl_votable) && retry_cnt++ < 30) {
+		schedule_delayed_work(&fast_charge_work, msecs_to_jiffies(1000));
+		return;
+	}
+
+	if (force_fast_charge)
+		fast_charge_apply(true);
 }
 
 static ssize_t force_fast_charge_show(struct kobject *kobj,
@@ -99,11 +131,16 @@ static int __init fast_charge_init(void)
 	if (ret)
 		kobject_put(fast_charge_kobj);
 
+	INIT_DELAYED_WORK(&fast_charge_work, fast_charge_work_fn);
+	schedule_delayed_work(&fast_charge_work, msecs_to_jiffies(3000));
+
 	return ret;
 }
 
 static void __exit fast_charge_exit(void)
 {
+	cancel_delayed_work_sync(&fast_charge_work);
+
 	if (force_fast_charge)
 		fast_charge_apply(false);
 

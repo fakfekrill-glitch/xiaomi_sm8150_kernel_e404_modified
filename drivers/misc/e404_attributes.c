@@ -18,7 +18,8 @@ int early_dtbo_type = 2;
 int early_dtbo_type = 1;
 #endif
 bool early_dtbo_130 = 0;
-bool early_batt_profile = 1;
+int early_batt_profile = 1;
+int early_batt_capacity_mah = 0;
 
 int early_lyb_override = 0;
 bool early_lyb_pressure = false;
@@ -31,6 +32,7 @@ struct e404_attributes e404_data = {
     .rom_type                   = 1,
     .dtbo_type                  = 0,
     .batt_profile               = 1,
+    .batt_capacity_mah          = 0,
     .kgsl_skip_zeroing          = 0,
     .file_sync                  = 1,
     .panel_width                = 70,
@@ -85,10 +87,16 @@ static int __init parse_e404_args(char *str)
             early_ir_type = 0;
         else if (strcmp(arg, "ir1") == 0)
             early_ir_type = 1;
-        else if (strcmp(arg, "batt_def") == 0)
+        else if (strcmp(arg, "batt_def") == 0) {
             early_batt_profile = 0;
-        else if (strcmp(arg, "batt_6k") == 0)
+            early_batt_capacity_mah = 5160;
+        } else if (strcmp(arg, "batt_6k") == 0) {
             early_batt_profile = 1;
+            early_batt_capacity_mah = 6000;
+        } else if (strcmp(arg, "batt_65k") == 0 || strcmp(arg, "batt_6500") == 0) {
+            early_batt_profile = 2;
+            early_batt_capacity_mah = 6500;
+        }
         else
             pr_alert("E404: Unknown flag: %s\n", arg);
     }
@@ -190,6 +198,7 @@ E404_ATTR_RO(effcpu);
 E404_ATTR_RO(rom_type);
 E404_ATTR_RO(dtbo_type);
 E404_ATTR_RW(batt_profile);
+E404_ATTR_RW(batt_capacity_mah);
 E404_ATTR_RO(panel_width);
 E404_ATTR_RO(panel_height);
 E404_ATTR_RW(kgsl_skip_zeroing);
@@ -202,6 +211,7 @@ static struct attribute *e404_attrs[] = {
     &bg_blocklist_attr.attr,
     &fas_attr.attr,
     &batt_profile_attr.attr,
+    &batt_capacity_mah_attr.attr,
     NULL,
 };
 
@@ -214,6 +224,7 @@ static struct attribute *e404_prop_attrs[] = {
     &rom_type_attr.attr,
     &dtbo_type_attr.attr,
     &batt_profile_attr.attr,
+    &batt_capacity_mah_attr.attr,
     &panel_width_attr.attr,
     &panel_height_attr.attr,
     NULL,
@@ -232,6 +243,7 @@ static void e404_parse_attributes(void) {
     lyb_override = early_lyb_override;
     e404_data.ir = early_ir_type;
     e404_data.batt_profile = early_batt_profile;
+    e404_data.batt_capacity_mah = early_batt_capacity_mah;
 }
 
 #define LYB_ATTR_RW(name) \

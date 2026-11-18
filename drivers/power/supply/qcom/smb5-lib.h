@@ -192,8 +192,8 @@ enum print_reason {
 #define SDP_100_MA			100000
 #define SDP_CURRENT_UA			500000
 #define CDP_CURRENT_UA			1500000
-#define DCP_CURRENT_UA			2000000
-#define HVDCP_CURRENT_UA		2800000
+#define DCP_CURRENT_UA			3000000
+#define HVDCP_CURRENT_UA		3000000
 #define HVDCP_CLASS_B_CURRENT_UA		3100000
 #define HVDCP_START_CURRENT_UA_FOR_BQ	500000
 #define TYPEC_DEFAULT_CURRENT_UA	900000
@@ -202,7 +202,7 @@ enum print_reason {
 #define DCIN_ICL_MIN_UA			100000
 #define DCIN_ICL_MAX_UA			1500000
 #define DCIN_ICL_STEP_UA		100000
-#define SLOWLY_CHARGING_CURRENT		1000000
+#define SLOWLY_CHARGING_CURRENT		6000000
 #define ADC_CHG_TERM_MASK		32767
 /*DCIN ICL*/
 #define PSNS_CURRENT_SAMPLE_RATE 1053
@@ -1237,4 +1237,9 @@ struct usbpd *smb_get_usbpd(void);
 
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);
+
+extern int force_fast_charge;
+void fast_charge_apply(bool enable);
+void fast_charge_reapply_if_enabled(void);
+
 #endif /* __SMB5_CHARGER_H */
