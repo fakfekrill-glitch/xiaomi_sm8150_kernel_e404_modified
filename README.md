@@ -72,6 +72,23 @@
 - **Clean Inode & Retval Hooks**:
   - Cleaned up duplicate `fstat` counts and ensured no-op returns for `ksu_handle_newfstat_ret` under SuSFS.
 
+#### 3. ⚡ Extreme Fast Charging (6000mA) & Custom Battery (6500mAh) Engine
+- **Full 6000mA (6A) Fast Charging Unlock**:
+  - Replaced standard min-voting with kernel-level `vote_override` on `fcc_votable` (6,000,000 µA) and `usb_icl_votable` (3,000,000 µA), bypassing lower votes from userspace daemons.
+  - Raised Device Tree charging limits (`qcom,fcc-max-ua`, `mi,fcc-batt-unverify-ua`, and `cp_qc30` thresholds).
+- **880mA / 180mA Screen-On Throttling Bypass**:
+  - Eliminated the severe charge current drop down to 880mA / 180mA when screen turns on by preventing userspace `thermal-engine` / `mi_thermald` (`system_temp_level >= 13`) from disabling charge pumps (`PM_ALGO_RET_CHG_DISABLED`) or forcing `THERMAL_DAEMON_VOTER = 1000000`.
+- **Custom Battery Capacity Profiles (6000mAh, 6500mAh & Arbitrary Capacity)**:
+  - Integrated Fuel Gauge battery data profile for **6500mAh** custom battery (`fg-gen4-batterydata-vayu-6500mah.dtsi`).
+  - Switchable profiles via `/sys/e404/batt_profile`:
+    - `0`: Original OEM battery (5,160 mAh)
+    - `1`: 6,000 mAh custom battery (Default)
+    - `2`: 6,500 mAh custom battery
+  - Dynamic arbitrary capacity node via `/sys/e404/batt_capacity_mah` (e.g. `echo 6500 > /sys/e404/batt_capacity_mah`) to update `CHARGE_FULL_DESIGN` and `CHARGE_FULL` dynamically for battery monitor apps (AccuBattery, Franco Kernel Manager, etc.).
+  - Kernel cmdline parameters supported: `batt_def`, `batt_6k`, `batt_65k`.
+- **Silenced DS28E16 Dmesg Spam**:
+  - Silenced continuous authentication failure log spam from the DS28E16 chip when using aftermarket batteries without OEM crypto chips.
+
 ---
 
 ## 📸 Verification & Proof (BakaSU, SuSFS & M-Banking)
