@@ -800,7 +800,8 @@ static int sugov_init(struct cpufreq_policy *policy)
 		goto stop_kthread;
 	}
 
-	tunables->rate_limit_us = 2000;
+	/* 1ms rate limit to match 120Hz display refresh budget (8.33ms) */
+	tunables->rate_limit_us = 1000;
 
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;

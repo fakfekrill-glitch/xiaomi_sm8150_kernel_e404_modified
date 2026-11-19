@@ -180,22 +180,34 @@ zipbuild() {
     if [[ "$TARGET" == "VAYBPF" ]]; then
         ZIP_NAME="RE404-VAYU-ResukiSU-SuSFS-BPF.zip"
         cat << 'EOF' > banner
-=================================================
-             E404 CUSTOM KERNEL
-       POCO X3 Pro (vayu / bhima)
-     ReSukiSU + SuSFS v1.5.5 + eBPF
-   Compiled by: Dalu Raziq Hidayatullah
-=================================================
+    ____  ______ __  ____  __ __
+   / __/ /_  __// / / / / / // /
+  / _/    / /  / /_/ / /_/ // /_
+ /___/   /_/   \____/\____//___/
+ ╔════════════════════════════════════════╗
+ ║      >> E404 CYBERNETIC KERNEL <<      ║
+ ║  • Target  : Android 15 / 16 / 17+     ║
+ ║  • Core    : eBPF + ReSukiSU + SuSFS   ║
+ ║  • Engine  : BBRplus FQ | Sched 120Hz  ║
+ ║  • Device  : POCO X3 Pro (vayu/bhima)  ║
+ ║  • Author  : Dalu Raziq Hidayatullah   ║
+ ╚════════════════════════════════════════╝
 EOF
     else
         ZIP_NAME="RE404-VAYU-ResukiSU-SuSFS-NON-BPF.zip"
         cat << 'EOF' > banner
-=================================================
-             E404 CUSTOM KERNEL
-       POCO X3 Pro (vayu / bhima)
-   ReSukiSU + SuSFS v1.5.5 (Non-BPF)
-   Compiled by: Dalu Raziq Hidayatullah
-=================================================
+    ____  ______ __  ____  __ __
+   / __/ /_  __// / / / / / // /
+  / _/    / /  / /_/ / /_/ // /_
+ /___/   /_/   \____/\____//___/
+ ╔════════════════════════════════════════╗
+ ║      >> E404 CYBERNETIC KERNEL <<      ║
+ ║  • Target  : Android 12 - 14 / HyperOS ║
+ ║  • Core    : Non-BPF + ReSukiSU + SuSFS║
+ ║  • Engine  : BBRplus FQ | Sched 120Hz  ║
+ ║  • Device  : POCO X3 Pro (vayu/bhima)  ║
+ ║  • Author  : Dalu Raziq Hidayatullah   ║
+ ╚════════════════════════════════════════╝
 EOF
     fi
     rm -f "$BASE_DIR/$ZIP_NAME"
