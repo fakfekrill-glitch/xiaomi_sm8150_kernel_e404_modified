@@ -156,8 +156,9 @@ struct scan_control {
 
 /*
  * From 0 .. 100.  Higher means more swappy.
+ * Set default to 100 to optimize ZRAM ZSTD compression and keep active RAM free.
  */
-int vm_swappiness = 80;
+int vm_swappiness = 100;
 /*
  * The total number of pages which are beyond the high watermark within all
  * zones.

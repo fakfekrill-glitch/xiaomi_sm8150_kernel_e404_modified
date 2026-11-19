@@ -285,34 +285,6 @@ do {									\
 		       __ret = schedule_timeout(__ret))
 
 /**
- * swait_event_idle_timeout_exclusive - wait up to timeout without load contribution
- * @wq: the waitqueue to wait on
- * @condition: a C expression for the event to wait for
- * @timeout: timeout at which we'll give up in jiffies
- *
- * The process is put to sleep (TASK_IDLE) until the @condition evaluates to
- * true. The @condition is checked each time the waitqueue @wq is woken up.
- *
- * This function is mostly used when a kthread or workqueue waits for some
- * condition and doesn't want to contribute to system load. Signals are
- * ignored.
- *
- * Returns:
- * 0 if the @condition evaluated to %false after the @timeout elapsed,
- * 1 if the @condition evaluated to %true after the @timeout elapsed,
- * or the remaining jiffies (at least 1) if the @condition evaluated
- * to %true before the @timeout elapsed.
- */
-#define swait_event_idle_timeout_exclusive(wq, condition, timeout)	\
-({									\
-	long __ret = timeout;						\
-	if (!___wait_cond_timeout(condition))				\
-		__ret = __swait_event_idle_timeout(wq,			\
-						   condition, timeout);	\
-	__ret;								\
-})
-
-/**
  * swait_event_idle_exclusive - wait without system load contribution
  * @wq: the waitqueue to wait on
  * @condition: a C expression for the event to wait for

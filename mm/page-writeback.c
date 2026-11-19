@@ -69,9 +69,10 @@ static long ratelimit_pages = 32;
 /* The following parameters are exported via /proc/sys/vm */
 
 /*
- * Start background writeback (via writeback threads) at this percentage
+ * Start background writeback (via writeback threads) at this percentage.
+ * Lowered to 5% to flush dirty pages earlier and prevent large I/O freeze spikes.
  */
-int dirty_background_ratio = 10;
+int dirty_background_ratio = 5;
 
 /*
  * dirty_background_bytes starts at 0 (disabled) so that it is a function of
