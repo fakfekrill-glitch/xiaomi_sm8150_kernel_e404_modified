@@ -280,10 +280,10 @@ compilebuild() {
     
     if [[ $TC == *Clang* ]]; then
         echo "-- Compiling with Clang --"
-        make "${make_flags[@]}" || errorbuild
+        make "${make_flags[@]}" Image dtbs dtb.img || errorbuild
     else
         echo "-- Compiling with GCC --"
-        make "${make_flags[@]}" || errorbuild
+        make "${make_flags[@]}" Image dtbs dtb.img || errorbuild
     fi
 }
 
