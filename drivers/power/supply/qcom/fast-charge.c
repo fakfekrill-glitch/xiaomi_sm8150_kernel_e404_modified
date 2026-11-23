@@ -17,7 +17,6 @@
 #define THERMAL_DAEMON_VOTER		"THERMAL_DAEMON_VOTER"
 #define RESTRICT_CHG_VOTER		"RESTRICT_CHG_VOTER"
 
-#define FAST_CHARGE_ICL_UA		3000000
 #define FAST_CHARGE_FCC_UA		6000000
 
 static struct kobject *fast_charge_kobj;
@@ -41,12 +40,19 @@ void fast_charge_apply(bool enable)
 			vote(fcc_votable, "BATT_VERIFY_VOTER", false, 0);
 		}
 		if (usb_icl_votable) {
-			vote_override(usb_icl_votable, FAST_CHARGE_VOTER, true,
-			              FAST_CHARGE_ICL_UA);
+			/*
+			 * DO NOT vote_override or force vote on USB_ICL!
+			 * USB_ICL is VOTE_MIN and must be determined by hardware
+			 * APSD (SDP/CDP/DCP), QC, PD negotiation, and AICL.
+			 * Forcing USB_ICL causes VBUS collapse and disconnect on plug-in.
+			 * Simply un-vote thermal daemon throttle.
+			 */
+			vote_override(usb_icl_votable, FAST_CHARGE_VOTER, false, 0);
+			vote(usb_icl_votable, FAST_CHARGE_VOTER, false, 0);
 			vote(usb_icl_votable, THERMAL_DAEMON_VOTER, false, 0);
 		}
 
-		pr_info("fast_charge: enabled — FCC overridden to 6A, ICL to 3A\n");
+		pr_info("fast_charge: enabled — FCC overridden to 6A, input negotiation preserved\n");
 	} else {
 		if (fcc_votable)
 			vote_override(fcc_votable, FAST_CHARGE_VOTER, false, 0);
