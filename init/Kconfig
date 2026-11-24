@@ -2189,7 +2189,7 @@ config BASE_SMALL
 menuconfig MODULES
 	bool "Enable loadable module support"
 	option modules
-	select MODULE_REL_CRCS
+	select MODULE_REL_CRCS if MODVERSIONS
 	help
 	  Kernel modules are small pieces of compiled code which can
 	  be inserted in the running kernel, rather than being
@@ -2397,7 +2397,7 @@ endif # MODULES
 config MODULES_TREE_LOOKUP
 	def_bool y
 	depends on PERF_EVENTS || TRACING || CFI_CLANG
-	select MODULE_REL_CRCS
+	select MODULE_REL_CRCS if MODVERSIONS
 
 config INIT_ALL_POSSIBLE
 	bool
