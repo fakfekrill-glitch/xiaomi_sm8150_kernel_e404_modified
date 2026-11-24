@@ -24,6 +24,41 @@
 #include <linux/irqdesc.h>
 
 #include "power.h"
+#include <linux/moduleparam.h>
+#include <linux/miscdevice.h>
+
+#define MAX_BLOCKED_WAKELOCKS_LEN 1024
+static char blocked_wakelocks[MAX_BLOCKED_WAKELOCKS_LEN] =
+	"wlan_pno_wl;wlan_netlink_wl;wlan_wow_wl;wlan_extscan_wl;netmgr_wl;IPA_WS;qcom_rx_wakelock;timerfd;sensor_ind";
+static bool enable_wakelock_blocker = true;
+
+module_param_named(enable_wakelock_blocker, enable_wakelock_blocker, bool, 0644);
+module_param_string(blocked_wakelocks, blocked_wakelocks, sizeof(blocked_wakelocks), 0644);
+
+static bool is_wakelock_blocked(const char *name)
+{
+	const char *p = blocked_wakelocks;
+	size_t name_len;
+
+	if (!enable_wakelock_blocker || !name || !*name)
+		return false;
+
+	name_len = strlen(name);
+
+	while (*p) {
+		const char *sep = strpbrk(p, ";,");
+		size_t token_len = sep ? (size_t)(sep - p) : strlen(p);
+
+		if (token_len == name_len && strncmp(p, name, token_len) == 0)
+			return true;
+
+		if (!sep)
+			break;
+		p = sep + 1;
+	}
+
+	return false;
+}
 
 #ifndef CONFIG_SUSPEND
 suspend_state_t pm_suspend_target_state;
@@ -604,6 +639,9 @@ static void wakeup_source_activate(struct wakeup_source *ws)
  */
 static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 {
+	if (ws && is_wakelock_blocked(ws->name))
+		return;
+
 	ws->event_count++;
 	/* This is racy, but the counter is approximate anyway. */
 	if (events_check_enabled)
@@ -627,6 +665,9 @@ void __pm_stay_awake(struct wakeup_source *ws)
 	unsigned long flags;
 
 	if (!ws)
+		return;
+
+	if (is_wakelock_blocked(ws->name))
 		return;
 
 	spin_lock_irqsave(&ws->lock, flags);
@@ -815,6 +856,9 @@ void pm_wakeup_ws_event(struct wakeup_source *ws, unsigned int msec, bool hard)
 	unsigned long expires;
 
 	if (!ws)
+		return;
+
+	if (is_wakelock_blocked(ws->name))
 		return;
 
 	spin_lock_irqsave(&ws->lock, flags);
@@ -1179,3 +1223,44 @@ static int __init wakeup_sources_debugfs_init(void)
 }
 
 postcore_initcall(wakeup_sources_debugfs_init);
+
+static ssize_t boeffla_wakelock_show(struct device *dev,
+				     struct device_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%s\n", blocked_wakelocks);
+}
+
+static ssize_t boeffla_wakelock_store(struct device *dev,
+				      struct device_attribute *attr,
+				      const char *buf, size_t count)
+{
+	size_t len = min(count, (size_t)(MAX_BLOCKED_WAKELOCKS_LEN - 1));
+	strncpy(blocked_wakelocks, buf, len);
+	blocked_wakelocks[len] = '\0';
+	if (len > 0 && blocked_wakelocks[len - 1] == '\n')
+		blocked_wakelocks[len - 1] = '\0';
+	return count;
+}
+
+static DEVICE_ATTR(wakelock_blocker, 0644, boeffla_wakelock_show, boeffla_wakelock_store);
+
+static struct miscdevice boeffla_misc_dev = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "boeffla_wakelock_blocker",
+};
+
+static int __init boeffla_wakelock_init(void)
+{
+	int ret;
+
+	ret = misc_register(&boeffla_misc_dev);
+	if (ret)
+		return ret;
+
+	ret = device_create_file(boeffla_misc_dev.this_device, &dev_attr_wakelock_blocker);
+	if (ret)
+		misc_deregister(&boeffla_misc_dev);
+
+	return ret;
+}
+late_initcall(boeffla_wakelock_init);
