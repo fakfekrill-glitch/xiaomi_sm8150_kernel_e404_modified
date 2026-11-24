@@ -32,8 +32,17 @@ void fast_charge_apply(bool enable)
 
 	if (enable) {
 		if (fcc_votable) {
-			vote_override(fcc_votable, FAST_CHARGE_VOTER, true,
-			              FAST_CHARGE_FCC_UA);
+			/*
+			 * Clear any override on FCC: FCC is VOTE_MIN and must allow
+			 * FCC_STEPPER_VOTER (1.5A) during initial plug-in so that
+			 * the original Xiaomi charger at 5V does not experience
+			 * VBUS collapse while sending QC3.0/HVDCP pulse negotiation.
+			 * Once VBUS is raised to 9V/11V, FCC_STEPPER_VOTER is released
+			 * and FCC smoothly reaches full 6000mA.
+			 */
+			vote_override(fcc_votable, FAST_CHARGE_VOTER, false, 0);
+			vote(fcc_votable, FAST_CHARGE_VOTER, true,
+			     FAST_CHARGE_FCC_UA);
 			vote(fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
 			vote(fcc_votable, RESTRICT_CHG_VOTER, false, 0);
 			vote(fcc_votable, "SLOWLY_CHARGING_VOTER", false, 0);
@@ -52,12 +61,16 @@ void fast_charge_apply(bool enable)
 			vote(usb_icl_votable, THERMAL_DAEMON_VOTER, false, 0);
 		}
 
-		pr_info("fast_charge: enabled — FCC overridden to 6A, input negotiation preserved\n");
+		pr_info("fast_charge: enabled — FCC set to 6A, stepper & input negotiation preserved\n");
 	} else {
-		if (fcc_votable)
+		if (fcc_votable) {
 			vote_override(fcc_votable, FAST_CHARGE_VOTER, false, 0);
-		if (usb_icl_votable)
+			vote(fcc_votable, FAST_CHARGE_VOTER, false, 0);
+		}
+		if (usb_icl_votable) {
 			vote_override(usb_icl_votable, FAST_CHARGE_VOTER, false, 0);
+			vote(usb_icl_votable, FAST_CHARGE_VOTER, false, 0);
+		}
 
 		pr_info("fast_charge: disabled\n");
 	}
