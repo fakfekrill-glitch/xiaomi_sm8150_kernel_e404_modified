@@ -1,0 +1,120 @@
+#!/system/bin/sh
+# E404 Kernel CLI System Fetch Tool for POCO X3 Pro (vayu/bhima)
+
+# ANSI Colors
+Y='\033[1;33m'
+C='\033[1;36m'
+G='\033[1;32m'
+R='\033[1;31m'
+W='\033[1;37m'
+D='\033[0;37m'
+N='\033[0m'
+
+read_val() {
+    [ -r "$1" ] && cat "$1" 2>/dev/null || echo ""
+}
+
+# Device Info
+MODEL=$(getprop ro.product.marketname 2>/dev/null)
+[ -z "$MODEL" ] && MODEL=$(getprop ro.product.model 2>/dev/null)
+[ -z "$MODEL" ] && MODEL="POCO X3 Pro"
+CODENAME=$(getprop ro.product.device 2>/dev/null)
+[ -z "$CODENAME" ] && CODENAME="vayu"
+ANDROID_VER=$(getprop ro.build.version.release 2>/dev/null)
+KERNEL_VER=$(uname -r)
+
+# CPU Usage % (two quick /proc/stat samples)
+CPU_PCT="N/A"
+if [ -r /proc/stat ]; then
+    S1=$(awk '/^cpu /{print $2+$3+$4+$5+$6+$7+$8, $5+$6}' /proc/stat)
+    sleep 0.2 2>/dev/null || usleep 200000 2>/dev/null
+    S2=$(awk '/^cpu /{print $2+$3+$4+$5+$6+$7+$8, $5+$6}' /proc/stat)
+    CPU_PCT=$(awk -v s1="$S1" -v s2="$S2" 'BEGIN{
+        split(s1,a," "); split(s2,b," ");
+        dt=b[1]-a[1]; di=b[2]-a[2];
+        if (dt>0) printf "%.1f%%", ((dt-di)*100.0)/dt; else print "0.0%"
+    }')
+fi
+
+# CPU Frequencies (Little / Big / Prime)
+F0=$(read_val /sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq)
+F4=$(read_val /sys/devices/system/cpu/cpufreq/policy4/scaling_cur_freq)
+F7=$(read_val /sys/devices/system/cpu/cpufreq/policy7/scaling_cur_freq)
+[ -n "$F0" ] && F0=$((F0 / 1000)) || F0="?"
+[ -n "$F4" ] && F4=$((F4 / 1000)) || F4="?"
+[ -n "$F7" ] && F7=$((F7 / 1000)) || F7="?"
+
+# GPU Info (Adreno 640)
+GPU_CLK=$(read_val /sys/class/kgsl/kgsl-3d0/gpuclk)
+[ -n "$GPU_CLK" ] && GPU_MHZ=$((GPU_CLK / 1000000)) || GPU_MHZ="?"
+GPU_BUSY=$(read_val /sys/class/kgsl/kgsl-3d0/gpu_busy_percentage | tr -d ' %')
+[ -n "$GPU_BUSY" ] && GPU_STR="Adreno 640 @ ${GPU_MHZ} MHz (${GPU_BUSY}%)" || GPU_STR="Adreno 640 @ ${GPU_MHZ} MHz"
+
+# RAM & ZRAM Info
+RAM_STR=$(awk '
+    /MemTotal:/ {t=$2}
+    /MemAvailable:/ {a=$2}
+    END {
+        u=(t-a)/1024; tot=t/1024;
+        if (t>0) printf "%.0f / %.0f MB (%.1f%%)", u, tot, (u*100.0)/tot;
+        else print "N/A"
+    }' /proc/meminfo 2>/dev/null)
+
+ZRAM_STR="N/A"
+if [ -r /sys/block/zram0/mm_stat ]; then
+    ZRAM_STR=$(awk '{printf "%.0f MB used (%.0f MB compr)", $1/1048576, $2/1048576}' /sys/block/zram0/mm_stat 2>/dev/null)
+fi
+
+# Network: IP & MAC
+IP_ADDR=$(ip -4 addr show wlan0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -n1)
+if [ -z "$IP_ADDR" ]; then
+    IP_ADDR=$(ip -4 addr show 2>/dev/null | awk '/inet / && !/127\.0\.0\.1/{print $2}' | cut -d/ -f1 | head -n1)
+fi
+[ -z "$IP_ADDR" ] && IP_ADDR="Disconnected"
+
+MAC_ADDR=$(read_val /sys/class/net/wlan0/address)
+if [ -z "$MAC_ADDR" ]; then
+    MAC_ADDR=$(ip link show wlan0 2>/dev/null | awk '/link\/ether/{print $2}' | head -n1)
+fi
+[ -z "$MAC_ADDR" ] && MAC_ADDR="Hidden (No Root)"
+
+# Battery Health Info
+BAT_CAP=$(read_val /sys/class/power_supply/battery/capacity)
+BAT_HEALTH=$(read_val /sys/class/power_supply/battery/health)
+BAT_STATUS=$(read_val /sys/class/power_supply/battery/status)
+BAT_TEMP_RAW=$(read_val /sys/class/power_supply/battery/temp)
+BAT_VOLT_RAW=$(read_val /sys/class/power_supply/battery/voltage_now)
+BAT_CURR_RAW=$(read_val /sys/class/power_supply/battery/current_now)
+BAT_FULL=$(read_val /sys/class/power_supply/battery/charge_full)
+BAT_DESIGN=$(read_val /sys/class/power_supply/battery/charge_full_design)
+
+[ -n "$BAT_TEMP_RAW" ] && BAT_TEMP=$(awk -v t="$BAT_TEMP_RAW" 'BEGIN{printf "%.1f°C", t/10.0}') || BAT_TEMP="?"
+[ -n "$BAT_VOLT_RAW" ] && BAT_VOLT=$(awk -v v="$BAT_VOLT_RAW" 'BEGIN{printf "%.2fV", v/1000000.0}') || BAT_VOLT="?"
+[ -n "$BAT_CURR_RAW" ] && BAT_CURR=$((BAT_CURR_RAW / 1000)) || BAT_CURR="?"
+
+BAT_LIFE=""
+if [ -n "$BAT_FULL" ] && [ -n "$BAT_DESIGN" ] && [ "$BAT_DESIGN" -gt 0 ] 2>/dev/null; then
+    BAT_LIFE=$(awk -v f="$BAT_FULL" -v d="$BAT_DESIGN" 'BEGIN{printf " | Cap: %.0f/%.0f mAh (%.0f%%)", f/1000.0, d/1000.0, (f*100.0)/d}')
+fi
+
+# Kernel Features Status
+TCP_CC=$(read_val /proc/sys/net/ipv4/tcp_congestion_control)
+[ -z "$TCP_CC" ] && TCP_CC="N/A"
+WL_BLK=$(read_val /sys/module/wakeup/parameters/enable_wakelock_blocker)
+[ "$WL_BLK" = "Y" ] || [ "$WL_BLK" = "1" ] && WL_STR="Active" || WL_STR="Off"
+MGLRU=$(read_val /sys/kernel/mm/lru_gen/enabled)
+[ -n "$MGLRU" ] && MGLRU_STR="Enabled ($MGLRU)" || MGLRU_STR="N/A"
+
+printf "\n"
+printf "${Y}  ____   ___   ____  ___  ${N}  ${C}E404 CYBERNETIC FETCH${N}\n"
+printf "${Y} |  _ \ / _ \ / ___|/ _ \ ${N}  ${W}Device  :${N} ${G}${MODEL} (${CODENAME})${N}\n"
+printf "${Y} | |_) | | | | |   | | | |${N}  ${W}Android :${N} ${ANDROID_VER:-N/A} | ${W}Kernel:${N} ${KERNEL_VER}\n"
+printf "${Y} |  __/| |_| | |___| |_| |${N}  ${W}CPU     :${N} ${CPU_PCT} (${F0}/${F4}/${F7} MHz)\n"
+printf "${Y} |_|    \___/ \____|\___/ ${N}  ${W}GPU     :${N} ${GPU_STR}\n"
+printf "${C}  >> E404 KERNEL VAYU <<  ${N}  ${W}RAM     :${N} ${RAM_STR}\n"
+printf "                            ${W}ZRAM    :${N} ${ZRAM_STR}\n"
+printf "                            ${W}IP Addr :${N} ${IP_ADDR}\n"
+printf "                            ${W}MAC Addr:${N} ${MAC_ADDR}\n"
+printf "                            ${W}Battery :${N} ${BAT_CAP:-?}% (${BAT_STATUS:-?}, ${BAT_HEALTH:-?}) ${BAT_TEMP} | ${BAT_VOLT} | ${BAT_CURR} mA${BAT_LIFE}\n"
+printf "                            ${W}Tuning  :${N} TCP=${TCP_CC} | DeepSleep=${WL_STR} | MGLRU=${MGLRU_STR}\n"
+printf "\n"
