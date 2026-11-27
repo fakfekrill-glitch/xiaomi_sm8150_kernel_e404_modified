@@ -29,35 +29,43 @@
 
 #define MAX_BLOCKED_WAKELOCKS_LEN 1024
 static char blocked_wakelocks[MAX_BLOCKED_WAKELOCKS_LEN] =
-	"wlan_pno_wl;wlan_netlink_wl;wlan_wow_wl;wlan_extscan_wl;netmgr_wl;IPA_WS;qcom_rx_wakelock;timerfd;sensor_ind";
+	"wlan_pno_wl;wlan_netlink_wl;wlan_wow_wl;wlan_extscan_wl;netmgr_wl;IPA_WS;qcom_rx_wakelock";
 static bool enable_wakelock_blocker = true;
+static DEFINE_SPINLOCK(wakelock_blocker_lock);
 
 module_param_named(enable_wakelock_blocker, enable_wakelock_blocker, bool, 0644);
 module_param_string(blocked_wakelocks, blocked_wakelocks, sizeof(blocked_wakelocks), 0644);
 
 static bool is_wakelock_blocked(const char *name)
 {
-	const char *p = blocked_wakelocks;
+	const char *p;
 	size_t name_len;
+	unsigned long flags;
+	bool blocked = false;
 
-	if (!enable_wakelock_blocker || !name || !*name)
+	if (!READ_ONCE(enable_wakelock_blocker) || !name || !*name)
 		return false;
 
 	name_len = strlen(name);
+	spin_lock_irqsave(&wakelock_blocker_lock, flags);
+	p = blocked_wakelocks;
 
 	while (*p) {
 		const char *sep = strpbrk(p, ";,");
 		size_t token_len = sep ? (size_t)(sep - p) : strlen(p);
 
-		if (token_len == name_len && strncmp(p, name, token_len) == 0)
-			return true;
+		if (token_len == name_len && strncmp(p, name, token_len) == 0) {
+			blocked = true;
+			break;
+		}
 
 		if (!sep)
 			break;
 		p = sep + 1;
 	}
 
-	return false;
+	spin_unlock_irqrestore(&wakelock_blocker_lock, flags);
+	return blocked;
 }
 
 #ifndef CONFIG_SUSPEND
@@ -1227,18 +1235,33 @@ postcore_initcall(wakeup_sources_debugfs_init);
 static ssize_t boeffla_wakelock_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	return scnprintf(buf, PAGE_SIZE, "%s\n", blocked_wakelocks);
+	unsigned long flags;
+	ssize_t ret;
+
+	spin_lock_irqsave(&wakelock_blocker_lock, flags);
+	ret = scnprintf(buf, PAGE_SIZE, "%s\n", blocked_wakelocks);
+	spin_unlock_irqrestore(&wakelock_blocker_lock, flags);
+
+	return ret;
 }
 
 static ssize_t boeffla_wakelock_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
-	size_t len = min(count, (size_t)(MAX_BLOCKED_WAKELOCKS_LEN - 1));
-	strncpy(blocked_wakelocks, buf, len);
+	size_t len = min_t(size_t, count, MAX_BLOCKED_WAKELOCKS_LEN - 1);
+	unsigned long flags;
+
+	spin_lock_irqsave(&wakelock_blocker_lock, flags);
+	memcpy(blocked_wakelocks, buf, len);
 	blocked_wakelocks[len] = '\0';
-	if (len > 0 && blocked_wakelocks[len - 1] == '\n')
-		blocked_wakelocks[len - 1] = '\0';
+	while (len > 0 && (blocked_wakelocks[len - 1] == '\n' ||
+			   blocked_wakelocks[len - 1] == '\r' ||
+			   blocked_wakelocks[len - 1] == ' '  ||
+			   blocked_wakelocks[len - 1] == '\t'))
+		blocked_wakelocks[--len] = '\0';
+	spin_unlock_irqrestore(&wakelock_blocker_lock, flags);
+
 	return count;
 }
 

@@ -1790,8 +1790,8 @@ putback_inactive_pages(struct lruvec *lruvec, struct list_head *page_list)
 		}
 		if (put_page_testzero(page)) {
 			__ClearPageLRU(page);
-			__ClearPageActive(page);
 			del_page_from_lru_list(page, lruvec, lru);
+			__ClearPageActive(page);
 
 			if (unlikely(PageCompound(page))) {
 				spin_unlock_irq(&pgdat->lru_lock);
@@ -2028,8 +2028,8 @@ static unsigned move_active_pages_to_lru(struct lruvec *lruvec,
 
 		if (put_page_testzero(page)) {
 			__ClearPageLRU(page);
-			__ClearPageActive(page);
 			del_page_from_lru_list(page, lruvec, lru);
+			__ClearPageActive(page);
 
 			if (unlikely(PageCompound(page))) {
 				spin_unlock_irq(&pgdat->lru_lock);
@@ -2589,6 +2589,7 @@ static struct lru_gen_mm_list *get_mm_list(struct mem_cgroup *memcg)
 void lru_gen_add_mm(struct mm_struct *mm)
 {
 	int nid;
+	unsigned long flags;
 	struct mem_cgroup *memcg = get_mem_cgroup_from_mm(mm);
 	struct lru_gen_mm_list *mm_list = get_mm_list(memcg);
 
@@ -2597,7 +2598,7 @@ void lru_gen_add_mm(struct mm_struct *mm)
 	VM_BUG_ON_MM(mm->lru_gen.memcg, mm);
 	mm->lru_gen.memcg = memcg;
 #endif
-	spin_lock(&mm_list->lock);
+	spin_lock_irqsave(&mm_list->lock, flags);
 
 	for_each_node_state(nid, N_MEMORY) {
 		struct lruvec *lruvec = get_lruvec(memcg, nid);
@@ -2611,12 +2612,13 @@ void lru_gen_add_mm(struct mm_struct *mm)
 
 	list_add_tail(&mm->lru_gen.list, &mm_list->fifo);
 
-	spin_unlock(&mm_list->lock);
+	spin_unlock_irqrestore(&mm_list->lock, flags);
 }
 
 void lru_gen_del_mm(struct mm_struct *mm)
 {
 	int nid;
+	unsigned long flags;
 	struct lru_gen_mm_list *mm_list;
 	struct mem_cgroup *memcg = NULL;
 
@@ -2628,7 +2630,7 @@ void lru_gen_del_mm(struct mm_struct *mm)
 #endif
 	mm_list = get_mm_list(memcg);
 
-	spin_lock(&mm_list->lock);
+	spin_lock_irqsave(&mm_list->lock, flags);
 
 	for_each_node(nid) {
 		struct lruvec *lruvec = get_lruvec(memcg, nid);
@@ -2649,7 +2651,7 @@ void lru_gen_del_mm(struct mm_struct *mm)
 
 	list_del_init(&mm->lru_gen.list);
 
-	spin_unlock(&mm_list->lock);
+	spin_unlock_irqrestore(&mm_list->lock, flags);
 
 #ifdef CONFIG_MEMCG
 	mem_cgroup_put(mm->lru_gen.memcg);
@@ -2831,6 +2833,7 @@ static bool iterate_mm_list(struct lruvec *lruvec, struct lru_gen_mm_walk *walk,
 {
 	bool first = false;
 	bool last = true;
+	unsigned long flags;
 	struct mm_struct *mm = NULL;
 	struct mem_cgroup *memcg = lruvec_memcg(lruvec);
 	struct lru_gen_mm_list *mm_list = get_mm_list(memcg);
@@ -2852,7 +2855,7 @@ static bool iterate_mm_list(struct lruvec *lruvec, struct lru_gen_mm_walk *walk,
 	else if (walk->max_seq <= READ_ONCE(mm_state->seq))
 		return false;
 
-	spin_lock(&mm_list->lock);
+	spin_lock_irqsave(&mm_list->lock, flags);
 
 	VM_BUG_ON(mm_state->seq + 1 < walk->max_seq);
 	VM_BUG_ON(*iter && mm_state->seq > walk->max_seq);
@@ -2903,7 +2906,7 @@ done:
 	if (*iter || last)
 		reset_mm_stats(lruvec, walk, last);
 
-	spin_unlock(&mm_list->lock);
+	spin_unlock_irqrestore(&mm_list->lock, flags);
 
 	*iter = mm;
 
@@ -2913,6 +2916,7 @@ done:
 static bool iterate_mm_list_nowalk(struct lruvec *lruvec, unsigned long max_seq)
 {
 	bool success = false;
+	unsigned long flags;
 	struct mem_cgroup *memcg = lruvec_memcg(lruvec);
 	struct lru_gen_mm_list *mm_list = get_mm_list(memcg);
 	struct lru_gen_mm_state *mm_state = &lruvec->mm_state;
@@ -2920,7 +2924,7 @@ static bool iterate_mm_list_nowalk(struct lruvec *lruvec, unsigned long max_seq)
 	if (max_seq <= READ_ONCE(mm_state->seq))
 		return false;
 
-	spin_lock(&mm_list->lock);
+	spin_lock_irqsave(&mm_list->lock, flags);
 
 	VM_BUG_ON(mm_state->seq + 1 < max_seq);
 
@@ -2932,7 +2936,7 @@ static bool iterate_mm_list_nowalk(struct lruvec *lruvec, unsigned long max_seq)
 		success = true;
 	}
 
-	spin_unlock(&mm_list->lock);
+	spin_unlock_irqrestore(&mm_list->lock, flags);
 
 	return success;
 }
@@ -3468,15 +3472,20 @@ restart:
 		goto restart;
 }
 
-static int walk_pud_range(pud_t *pud, unsigned long start, unsigned long end,
+static int walk_pud_range(p4d_t *p4d, unsigned long start, unsigned long end,
 			  struct mm_walk *walk)
 {
+	int i;
+	pud_t *pud;
 	unsigned long addr;
 	unsigned long next;
 	struct lru_gen_mm_walk *priv = walk->private;
 
-	for (addr = start; addr != end; pud++, addr = next) {
-		pud_t val = READ_ONCE(*pud);
+	pud = pud_offset(p4d, start & P4D_MASK);
+restart:
+	i = (start >> PUD_SHIFT) & (PTRS_PER_PUD - 1);
+	for (addr = start; addr != end; i++, addr = next) {
+		pud_t val = READ_ONCE(pud[i]);
 
 		next = pud_addr_end(addr, end);
 
@@ -3487,12 +3496,20 @@ static int walk_pud_range(pud_t *pud, unsigned long start, unsigned long end,
 
 		if (priv->batched >= MAX_LRU_BATCH) {
 			end = (addr | ~PUD_MASK) + 1;
-			priv->next_addr = end && walk->vma ? max(end, walk->vma->vm_start) : 0;
-			return -EAGAIN;
+			goto done;
 		}
 	}
 
-	return 0;
+	if (PTRS_PER_PUD > 1 && i < PTRS_PER_PUD &&
+	    get_next_vma(walk, P4D_MASK, PUD_SIZE, &start, &end))
+		goto restart;
+
+	end = round_up(end, PUD_SIZE);
+done:
+	/* round_up() may overflow to 0; walk->vma might have been updated */
+	priv->next_addr = end && walk->vma ? max(end, walk->vma->vm_start) : 0;
+
+	return -EAGAIN;
 }
 
 static void walk_mm(struct lruvec *lruvec, struct mm_struct *mm, struct lru_gen_mm_walk *walk)
@@ -3504,7 +3521,7 @@ static void walk_mm(struct lruvec *lruvec, struct mm_struct *mm, struct lru_gen_
 		.mm = mm,
 		.private = walk,
 		.test_walk = should_skip_vma,
-		.pud_entry = walk_pud_range,
+		.p4d_entry = walk_pud_range,
 	};
 
 	walk->next_addr = FIRST_USER_ADDRESS;
@@ -3813,7 +3830,7 @@ static bool age_lruvec(struct lruvec *lruvec, struct scan_control *sc,
 }
 
 /* to protect the working set of the last N jiffies */
-static unsigned long lru_gen_min_ttl __read_mostly = 5 * HZ; // 5000ms
+static unsigned long lru_gen_min_ttl __read_mostly;
 static int lru_gen_min_ttl_unsatisfied;
 
 static void lru_gen_age_node(struct pglist_data *pgdat, struct scan_control *sc)
@@ -6414,7 +6431,7 @@ void wakeup_kswapd(struct zone *zone, gfp_t gfp_flags, int order,
  */
 unsigned long shrink_all_memory(unsigned long nr_to_reclaim)
 {
-	struct reclaim_state reclaim_state;
+	struct reclaim_state reclaim_state = {};
 	struct scan_control sc = {
 		.nr_to_reclaim = nr_to_reclaim,
 		.gfp_mask = GFP_HIGHUSER_MOVABLE,
@@ -6602,7 +6619,7 @@ static int __node_reclaim(struct pglist_data *pgdat, gfp_t gfp_mask, unsigned in
 	/* Minimum pages needed in order to stay on node */
 	const unsigned long nr_pages = 1 << order;
 	struct task_struct *p = current;
-	struct reclaim_state reclaim_state;
+	struct reclaim_state reclaim_state = {};
 	unsigned int noreclaim_flag;
 	struct scan_control sc = {
 		.nr_to_reclaim = max(nr_pages, SWAP_CLUSTER_MAX),

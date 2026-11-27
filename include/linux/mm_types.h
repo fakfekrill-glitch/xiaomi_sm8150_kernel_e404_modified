@@ -568,15 +568,17 @@ static inline void lru_gen_init_mm(struct mm_struct *mm)
 	nodes_clear(mm->lru_gen.nodes);
 }
 
-#define lru_gen_use_mm(mm)						\
+#define lru_gen_use_mm_task(mm, tsk)					\
 do {									\
 	/* unlikely but not a bug when racing with lru_gen_migrate_mm() */ \
 	VM_WARN_ON(list_empty(&(mm)->lru_gen.list));			\
 									\
-	if (!(current->flags & PF_KTHREAD) &&				\
+	if (!((tsk)->flags & PF_KTHREAD) &&				\
 	    !nodes_full((mm)->lru_gen.nodes))				\
 		nodes_setall((mm)->lru_gen.nodes);			\
 } while (0)
+
+#define lru_gen_use_mm(mm)	lru_gen_use_mm_task(mm, current)
 
 #else /* !CONFIG_LRU_GEN */
 
@@ -595,6 +597,10 @@ static inline void lru_gen_migrate_mm(struct mm_struct *mm)
 #endif
 
 static inline void lru_gen_init_mm(struct mm_struct *mm)
+{
+}
+
+static inline void lru_gen_use_mm_task(struct mm_struct *mm, struct task_struct *tsk)
 {
 }
 
