@@ -731,6 +731,22 @@ static void usbpd_update_pps_status(struct usbpd_pm *pdpm)
 	}
 }
 
+static bool usbpd_pm_fast_ramp_active(struct usbpd_pm *pdpm)
+{
+	int eff_fcc;
+	int fcc_lmt;
+
+	if (pdpm->cp.vbat_volt >= pm_config.bat_volt_lp_lmt - 100)
+		return false;
+
+	eff_fcc = usbpd_get_effective_fcc_val(pdpm);
+	fcc_lmt = eff_fcc > 0 ?
+		min(pm_config.bat_curr_lp_lmt, eff_fcc) :
+		pm_config.bat_curr_lp_lmt;
+
+	return pdpm->cp.ibat_curr < fcc_lmt - 1200;
+}
+
 #define TAPER_TIMEOUT	(25000 / PM_WORK_RUN_INTERVAL)
 #define IBUS_CHANGE_TIMEOUT  (2500 / PM_WORK_RUN_INTERVAL)
 static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
@@ -904,6 +920,9 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 	 * thermal mitigation*/
 
 	steps = min(sw_ctrl_steps, hw_ctrl_steps);
+	if (steps > 0 && usbpd_pm_fast_ramp_active(pdpm) &&
+	    ibus_total < ibus_limit - 600)
+		steps = 2;
 	pr_info("steps: %d, sw_ctrl_steps:%d, hw_ctrl_steps:%d\n", steps, sw_ctrl_steps, hw_ctrl_steps);
 	pdpm->request_voltage += steps * STEP_MV;
 
@@ -1184,9 +1203,20 @@ static void usbpd_pm_workfunc(struct work_struct *work)
 	pr_info("%s:pd_bat_volt_lp_lmt=%d, vbatt_now=%d\n",
 			__func__, pm_config.bat_volt_lp_lmt, pdpm->cp.vbat_volt);
 
-	if (!usbpd_pm_sm(pdpm) && pdpm->pd_active)
+	if (!usbpd_pm_sm(pdpm) && pdpm->pd_active) {
+		int interval_ms = PM_WORK_RUN_INTERVAL;
+
+		if (pdpm->state == PD_PM_STATE_FC2_ENTRY_1 ||
+		    pdpm->state == PD_PM_STATE_FC2_ENTRY_2 ||
+		    pdpm->state == PD_PM_STATE_FC2_ENTRY_3) {
+			interval_ms = 150;
+		} else if (pdpm->state == PD_PM_STATE_FC2_TUNE &&
+			   usbpd_pm_fast_ramp_active(pdpm)) {
+			interval_ms = 250;
+		}
 		schedule_delayed_work(&pdpm->pm_work,
-				msecs_to_jiffies(PM_WORK_RUN_INTERVAL));
+				msecs_to_jiffies(interval_ms));
+	}
 }
 
 static void usbpd_pm_disconnect(struct usbpd_pm *pdpm)

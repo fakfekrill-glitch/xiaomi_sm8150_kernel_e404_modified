@@ -60,7 +60,7 @@ Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Turbo Charge 6A (u
 - Fast charge override (`/sys/kernel/fast_charge/force_fast_charge`) active by default (`1`), forcing `FCC` up to `6,000,000 uA` (6A) while keeping Charge Pump active up to 100% battery capacity
 - Preserves dynamic `USB_ICL` hardware APSD and QC3 500mA voltage negotiation, preventing VBUS collapse on plug-in
 - Enables universal compatibility for aftermarket chargers and cables (Anker/third-party wide-range 11V/16V/21V PD-PPS, QC3 Class B 6000mA/3000mA, QC2 2A, DCP 2.4A, and floating-data cables via AICL)
-- Enables full Charge Pump operation (`BQ25970` / `LN8000`) with automatic PD FFC activation and accurate adapter `current_max` / Turbo Charge reporting on AOSP custom ROMs (crDroid) and MIUI
+- Enables full Charge Pump operation (`BQ25970` / `LN8000`) with Adaptive Fast-Ramp boost, automatic PD FFC activation, and accurate adapter `current_max` / Turbo Charge reporting on AOSP custom ROMs (crDroid) and MIUI
 - Switchable Fuel Gauge profiles via `/sys/e404/batt_profile` or `e404_args`:
   - `0` (`batt_def`): OEM battery (`5160 mAh`)
   - `1` (`batt_6k`): `6000 mAh` custom profile (Default)

@@ -688,6 +688,22 @@ const unsigned char *pm_state_str[] = {
 	"CP_STATE_STOP_CHARGE",
 };
 
+static bool cp_is_fast_ramp_active(void)
+{
+	int eff_fcc;
+	int ibat_lmt;
+
+	if (pm_state.bq2597x.vbat_volt >= sys_config.bat_volt_lp_lmt - 40)
+		return false;
+
+	eff_fcc = cp_get_effective_fcc_val(pm_state);
+	ibat_lmt = eff_fcc > 0 ?
+		min_t(int, eff_fcc, sys_config.bat_curr_lp_lmt) :
+		sys_config.bat_curr_lp_lmt;
+
+	return pm_state.bq2597x.ibat_curr < ibat_lmt - 800;
+}
+
 static void cp_move_state(pm_sm_state_t state)
 {
 #if 1
@@ -867,7 +883,7 @@ void cp_statemachine(unsigned int port)
 			break;
 		}
 
-		if (tune_vbus_retry > 23) {
+		if (tune_vbus_retry > 28) {
 			pr_err("Failed to tune adapter volt into valid range, charge with switching charger\n");
 			pm_state.sw_fc2_init_fail = true;
 			cp_move_state(CP_STATE_SW_ENTRY);
@@ -920,7 +936,8 @@ void cp_statemachine(unsigned int port)
 			recovery = true;
 			cp_move_state(CP_STATE_SW_ENTRY);
 		} else {// normal tune adapter output
-			cp_move_state(CP_STATE_FLASH2_DELAY);
+			cp_move_state(cp_is_fast_ramp_active() ?
+				CP_STATE_FLASH2_TUNE : CP_STATE_FLASH2_DELAY);
 		}
 		break;
 
@@ -968,8 +985,20 @@ static void cp_workfunc(struct work_struct *work)
 		return;
 	}
 
-	if (pm_state.usb_type == POWER_SUPPLY_TYPE_USB_HVDCP_3)
-		schedule_delayed_work(&pm_state.qc3_pm_work, HZ);
+	if (pm_state.usb_type == POWER_SUPPLY_TYPE_USB_HVDCP_3) {
+		unsigned long delay = HZ;
+
+		if (pm_state.state == CP_STATE_ENTRY ||
+		    pm_state.state == CP_STATE_FLASH2_ENTRY ||
+		    pm_state.state == CP_STATE_FLASH2_ENTRY_1 ||
+		    pm_state.state == CP_STATE_FLASH2_ENTRY_3) {
+			delay = msecs_to_jiffies(80);
+		} else if (pm_state.state == CP_STATE_FLASH2_TUNE &&
+			   cp_is_fast_ramp_active()) {
+			delay = msecs_to_jiffies(200);
+		}
+		schedule_delayed_work(&pm_state.qc3_pm_work, delay);
+	}
 }
 
 static int cp_qc30_notifier_call(struct notifier_block *nb,
@@ -982,10 +1011,10 @@ static int cp_qc30_notifier_call(struct notifier_block *nb,
 
 	if (strcmp(psy->desc->name, "usb") == 0) {
 		cp_get_usb_type();
-		if (pm_state.usb_type == POWER_SUPPLY_TYPE_USB_HVDCP_3) {
-			schedule_delayed_work(&pm_state.qc3_pm_work, 3*HZ);
+		if (pm_state.usb_type == POWER_SUPPLY_TYPE_USB_HVDCP_3 && !usb_hvdcp3_on) {
+			schedule_delayed_work(&pm_state.qc3_pm_work, msecs_to_jiffies(1500));
 			usb_hvdcp3_on = true;
-		} else if (pm_state.usb_type == POWER_SUPPLY_TYPE_UNKNOWN && usb_hvdcp3_on == true) {
+		} else if (pm_state.usb_type != POWER_SUPPLY_TYPE_USB_HVDCP_3 && usb_hvdcp3_on) {
 			cancel_delayed_work(&pm_state.qc3_pm_work);
 			schedule_delayed_work(&pm_state.qc3_pm_work, 0);
 			pr_info("pm_state.usb_type: %d\n", pm_state.usb_type);
