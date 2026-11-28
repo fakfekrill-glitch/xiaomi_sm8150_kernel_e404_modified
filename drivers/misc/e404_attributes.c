@@ -28,7 +28,6 @@ int early_ir_type = 0;
 
 
 struct e404_attributes e404_data = {
-    .effcpu                     = 0,
     .rom_type                   = 1,
     .dtbo_type                  = 0,
     .batt_profile               = 1,

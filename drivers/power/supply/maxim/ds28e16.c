@@ -863,7 +863,7 @@ static int ds28el16_get_page_data_retry(int page, unsigned char *data)
 	return DS_FALSE;
 }
 
-static int DS28E16_cmd_computeS_Secret_retry(int anon, int bdconst,
+static int __maybe_unused DS28E16_cmd_computeS_Secret_retry(int anon, int bdconst,
 				int pg, unsigned char *partial)
 {
 	int i;
@@ -880,7 +880,7 @@ static int DS28E16_cmd_computeS_Secret_retry(int anon, int bdconst,
 	return DS_FALSE;
 }
 
-static int DS28E16_cmd_computeReadPageAuthentication_retry(int anon, int pg,
+static int __maybe_unused DS28E16_cmd_computeReadPageAuthentication_retry(int anon, int pg,
 				unsigned char *challenge, unsigned char *hmac)
 {
 	int i;

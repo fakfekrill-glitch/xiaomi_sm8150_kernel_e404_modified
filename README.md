@@ -1,99 +1,89 @@
 # E404 Custom Kernel for POCO X3 Pro (vayu / bhima)
-### Modified with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, and eBPF
+Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Deep Sleep Wakelock Blocker, and eBPF
 
 ![Device](https://img.shields.io/badge/Device-POCO%20X3%20Pro%20(vayu%2Fbhima)-blue)
 ![SoC](https://img.shields.io/badge/SoC-Snapdragon%20860%20(SM8150--AC)-orange)
-![Kernel](https://img.shields.io/badge/Kernel-Linux%204.14.356-green)
+![Kernel](https://img.shields.io/badge/Kernel-4.14.356%20(4.19.404R)-green)
 ![Compiler](https://img.shields.io/badge/Compiler-Neutron%20Clang%2024%20(ThinLTO)-red)
-![Android](https://img.shields.io/badge/Android-12%20--%2017%2B%20(Tested%20on%20crDroid%2012.13)-purple)
+![Android](https://img.shields.io/badge/Android-12%20to%2017%2B%20(Tested%20on%20crDroid%2012.13)-purple)
 ![Root](https://img.shields.io/badge/Root-BakaSU%20%2B%20SuSFS%20v1.5.5-red)
 
 ---
 
-## 👨‍💻 Maintainer & Contacts
-- **Compiled & Maintained by**: **Dalu Raziq Hidayatullah** ([@fakfekrill-glitch](https://github.com/fakfekrill-glitch))
-- **Base Source**: [@deutereium](https://github.com/deutereium) ([xiaomi_sm8150_kernel_e404 Release R3](https://github.com/deutereium/xiaomi_sm8150_kernel_e404))
+## Maintainer and Contact
+- Compiled and maintained by Dalu Raziq Hidayatullah ([@fakfekrill-glitch](https://github.com/fakfekrill-glitch))
+- Base source by [@deutereium](https://github.com/deutereium) ([xiaomi_sm8150_kernel_e404](https://github.com/deutereium/xiaomi_sm8150_kernel_e404))
 
-### 📬 Socials & Contact
 [![Telegram](https://img.shields.io/badge/Telegram-@PushyAja-blue?logo=telegram)](https://t.me/PushyAja)
 [![Instagram](https://img.shields.io/badge/Instagram-dalu.hidayatullah-E4405F?logo=instagram)](https://instagram.com/dalu.hidayatullah)
 [![Discord](https://img.shields.io/badge/Discord-pushygamertag27-5865F2?logo=discord)](https://discord.com)
 
-- **Telegram**: [@PushyAja](https://t.me/PushyAja)
-- **Instagram**: [@dalu.hidayatullah](https://instagram.com/dalu.hidayatullah)
-- **Discord**: `pushygamertag27`
+- Telegram: [@PushyAja](https://t.me/PushyAja)
+- Instagram: [@dalu.hidayatullah](https://instagram.com/dalu.hidayatullah)
+- Discord: `pushygamertag27`
 
 ---
 
-## 📱 Device & OS Compatibility
-- **Device**: Xiaomi POCO X3 Pro (`vayu` / `bhima`)
-- **Platform**: Qualcomm Snapdragon 860 (SM8150-AC)
-- **Linux Kernel Base**: `4.14.356`
-- **Supported ROMs**:
-  - Fully tested, booted, and verified on **crDroid 12.13 (Android 16)**.
-  - Compatible with AOSP-based custom ROMs from Android 12, 13, 14, 15, 16, up to Android 17 (Baklava).
-  - Also compatible with MIUI 12.5 / 13 / 14 and HyperOS (using Non-BPF build).
+## Device and OS Compatibility
+- Device: Xiaomi POCO X3 Pro (`vayu` / `bhima`), Qualcomm Snapdragon 860 (`SM8150-AC`)
+- Kernel base: Linux `4.14.356` (reports `4.19.404R` via `scripts/POST-GEN.sh` for modern Android compatibility)
+- Verified on crDroid 12.13 (Android 16) with MGLRU, BPF, SuSFS v1.5.5, and Deep Sleep Wakelock Blocker active
+- Compatible with AOSP custom ROMs from Android 12 to Android 17 (Baklava)
+- Compatible with MIUI 12.5, 13, 14 and HyperOS using the Non-BPF build
 
 ---
 
-## ⚡ Features & Changelog
+## Kernel Features
 
-### 🚀 E404 Base R3 Highlights (by @deutereium)
-- **Android 17 Native Support**:
-  - Backport 5.15 Android Binder IPC.
-  - Backport `clone3()` syscall.
-  - Backport 5.15 `bpf_atomic` instruction set.
-- **Subsystem & Performance Upgrades**:
-  - Backport 5.10 RCU & 5.10 zram.
-  - Fixed HyperOS slow animation & 60Hz issue after reboot.
-  - Added 6000mAh battery kernel profile.
-  - Added multi IR driver support.
-  - Removed 140MHz GPU idling frequency and dropped CABC / multi-gen LRU.
-- **Bleeding-Edge Toolchain**: Built with **Neutron Clang 24.0.0git** with ThinLTO.
+### 1. Upstream E404 Base and Compiler Toolchain
+- Backports Linux 5.15 Android Binder IPC, `clone3()` syscall, and `bpf_atomic` support for Android 15 to 17+
+- Backports Linux 5.10 RCU and 5.10 ZRAM
+- Fixes HyperOS slow animations and the 60Hz refresh rate lock after reboot
+- Supports multi-IR drivers, removes the 140MHz GPU idle step, and disables CABC
+- Compiles with Neutron Clang 24.0.0 and Neutron LLD 24.0.0 (`CONFIG_LTO_CLANG_THIN=y`) with zero compiler warnings across both BPF and Non-BPF defconfigs
+- Disables unused `CONFIG_EDAC` and `CONFIG_QCOM_DLOAD_MODE` while keeping `pstore` (`ramoops`) active
 
----
+### 2. Multi-Gen LRU (MGLRU) and Memory Management
+- Enables Multi-Gen LRU (`CONFIG_LRU_GEN=y`, `CONFIG_LRU_GEN_ENABLED=y`) with 4 generations and 4 refault tiers tuned for SM8150 arm64 without hardware accessed-bit page walks (`/sys/kernel/mm/lru_gen/enabled` outputs `0x0001`, using `iterate_mm_list_nowalk()` and `lru_gen_look_around()`)
+- Sets `lru_gen_min_ttl` to `0` ms to avoid premature OOM triggers
+- Skips zero-scanned non-critical `vmpressure_global()` events so MGLRU aging and sorting passes do not cause false `pressure = 100` kills in Simple LMK (`CONFIG_ANDROID_SIMPLE_LMK=y`)
+- Fixes clean file page deactivation (`lru_deactivate_file_fn`) so pages stay on MGLRU generational lists rather than legacy LRU lists, along with fixes for `reclaim_state` initialization, `PG_active` clear ordering, `p4d_entry` pagewalk traversal, IRQ-safe `mm_list->lock`, and fork/exec task tracking
+- Uses ZSTD as the default ZRAM compressor (`CONFIG_ZRAM_DEF_COMP_ZSTD=y`) with `page_cluster = 0` to eliminate unnecessary swap readahead decompression
+- Tunes VM defaults to `vm_swappiness = 100`, `dirty_background_ratio = 5`, and `vfs_cache_pressure = 80`
 
-### 🛡️ Modified Upgrades (SuSFS + BakaSU by Dalu Raziq)
+### 3. Root and SuSFS Integration
+- Built-in ReSukiSU / BakaSU (`v4.2.0-rc3`) with `sulog` and `adb_root` enabled
+- Integrates SuSFS `v1.5.5` (`SUS_PATH`, `SUS_MOUNT`, `SUS_KSTAT`, `SPOOF_UNAME`, `SPOOF_CMDLINE_OR_BOOTCONFIG`, `OPEN_REDIRECT`, `SUS_MAP`, and KernelSU/SuSFS symbol hiding)
+- Fixes `sucompat` `faccessat` and `stat` user-pointer handling on non-GKI 4.14 kernels and uses heap allocations in `fs/susfs/` to avoid ThinLTO stack overflow warnings
 
-#### 1. Advanced Root & Stealth Engine
-- **ReSukiSU / BakaSU (v4.2.0-rc3)**:
-  - KernelSU Next fork with granular per-app root management and module unmount capabilities.
-- **SuSFS (v1.5.5)**:
-  - Kernel-level stealth filesystem hiding root traces, KSU mounts, and overlayfs paths.
-  - Passes detection by DuckDetector, DexGuard RASP, Native Detectors, and banking apps.
-  - Integrated modern SuSFS API compatibility (`susfs_auto_add_sus_path`, `susfs_auto_add_sus_bind_mount`, `SUSFS_MAGIC`).
+### 4. Deep Sleep Wakelock Blocker
+- Built-in Boeffla-style wakelock blocker (`drivers/base/power/wakeup.c`), active by default (`enable_wakelock_blocker = Y`)
+- Shares spinlock synchronization (`wakelock_blocker_lock`) across both `/sys/module/wakeup/parameters/blocked_wakelocks` and `/sys/class/misc/boeffla_wakelock_blocker/wakelock_blocker`
+- Default blocklist targets background network wakelocks: `wlan_pno_wl;wlan_netlink_wl;wlan_wow_wl;wlan_extscan_wl;netmgr_wl;IPA_WS;qcom_rx_wakelock`
+- Excludes `timerfd` and `sensor_ind` from the default blocklist so alarms, timers, sensors, and push notifications wake the device reliably during Deep Sleep
 
-#### 2. Critical Non-GKI 4.14 Bug Fixes
-- **Type-Safe `sucompat` Syscall Hooks**:
-  - Resolved a critical bootloop/crash in `KernelSU/kernel/feature/sucompat.c` and `sucompat.h` where `faccessat` and `stat` syscall hooks mistakenly dereferenced user-space pointers as `struct filename*` on non-GKI 4.14 kernels (causing page fault at `"/init"` / `0x692e0074696e692f`).
-  - Added compile-time `CONFIG_KSU_SUSFS_USE_STRUCT_FILENAME` guard for legacy non-GKI compatibility.
-- **Dynamic Stack Buffer Allocation**:
-  - Replaced large stack buffers in `fs/susfs/` with dynamic heap allocations (`kmalloc`/`kfree`) to eliminate kernel stack overflow warnings during Clang 24 ThinLTO compilation.
-- **Clean Inode & Retval Hooks**:
-  - Cleaned up duplicate `fstat` counts and ensured no-op returns for `ksu_handle_newfstat_ret` under SuSFS.
+### 5. Fast Charging (6A / 3A) and Battery Profiles
+- Fast charge override (`/sys/kernel/fast_charge/force_fast_charge`) defaults to `1`, overriding `FCC` to `6,000,000 uA` (6A) and `USB_ICL` to `3,000,000 uA` (3A) while clearing thermal and slow-charging throttles
+- Switchable Fuel Gauge profiles via `/sys/e404/batt_profile` or `e404_args`:
+  - `0` (`batt_def`): OEM battery (`5160 mAh`)
+  - `1` (`batt_6k`): `6000 mAh` custom profile (Default)
+  - `2` (`batt_65k`): `6500 mAh` custom profile (`fg-gen4-batterydata-vayu-6500mah.dtsi`)
+- Supports arbitrary capacity reporting via `/sys/e404/batt_capacity_mah`
+- Silences `ds28e16` authentication `dmesg` log spam on aftermarket batteries without OEM crypto ICs
 
-#### 3. ⚡ Extreme Fast Charging (6000mA) & Custom Battery (6500mAh) Engine
-- **Full 6000mA (6A) Fast Charging Unlock**:
-  - Replaced standard min-voting with kernel-level `vote_override` on `fcc_votable` (6,000,000 µA) and `usb_icl_votable` (3,000,000 µA), bypassing lower votes from userspace daemons.
-  - Raised Device Tree charging limits (`qcom,fcc-max-ua`, `mi,fcc-batt-unverify-ua`, and `cp_qc30` thresholds).
-- **880mA / 180mA Screen-On Throttling Bypass**:
-  - Eliminated the severe charge current drop down to 880mA / 180mA when screen turns on by preventing userspace `thermal-engine` / `mi_thermald` (`system_temp_level >= 13`) from disabling charge pumps (`PM_ALGO_RET_CHG_DISABLED`) or forcing `THERMAL_DAEMON_VOTER = 1000000`.
-- **Custom Battery Capacity Profiles (6000mAh, 6500mAh & Arbitrary Capacity)**:
-  - Integrated Fuel Gauge battery data profile for **6500mAh** custom battery (`fg-gen4-batterydata-vayu-6500mah.dtsi`).
-  - Switchable profiles via `/sys/e404/batt_profile`:
-    - `0`: Original OEM battery (5,160 mAh)
-    - `1`: 6,000 mAh custom battery (Default)
-    - `2`: 6,500 mAh custom battery
-  - Dynamic arbitrary capacity node via `/sys/e404/batt_capacity_mah` (e.g. `echo 6500 > /sys/e404/batt_capacity_mah`) to update `CHARGE_FULL_DESIGN` and `CHARGE_FULL` dynamically for battery monitor apps (AccuBattery, Franco Kernel Manager, etc.).
-  - Kernel cmdline parameters supported: `batt_def`, `batt_6k`, `batt_65k`.
-- **Silenced DS28E16 Dmesg Spam**:
-  - Silenced continuous authentication failure log spam from the DS28E16 chip when using aftermarket batteries without OEM crypto chips.
+### 6. Networking, Storage, and 120Hz Tuning
+- Sets `bbrplus` as the default TCP congestion algorithm (`bbr` and `westwood` also built in) paired with `fq` as the default qdisc (`CONFIG_DEFAULT_NET_SCH="fq"`), TCP Fast Open enabled (`client | server`), and `sysctl_tcp_slow_start_after_idle = 0`
+- Enables F2FS compression with `LZO`, `LZ4`, and `ZSTD`
+- Lowers `schedutil` rate limit to `1000 us` (1 ms) for 120Hz frame pacing, enables Prime core touch boost in `cpu-boost`, and enables `CONFIG_IRQ_SBALANCE=y`
+
+### 7. Built-in `e404` CLI Fetch Tool
+Flashing either AnyKernel3 zip installs the `e404` POSIX/mksh script automatically into available paths (`/data/adb/ksu/bin`, `/data/adb/magisk`, Termux `usr/bin`, or `/data/local/tmp`). Run `e404` in Termux or MT Manager Terminal to view CPU usage and cluster clocks, Adreno 640 GPU load and frequency, RAM and ZRAM compression ratios, Wi-Fi IP/MAC, battery telemetry, TCP congestion control, Deep Sleep status, and MGLRU status.
 
 ---
 
-## 📸 Verification & Proof (BakaSU, SuSFS & M-Banking)
+## Verification Proof (BakaSU, SuSFS, and Banking Apps)
 
-Here is proof of the kernel running with **BakaSU v4.2.0-rc3**, **SuSFS v1.5.5**, and passing M-Banking security checks on POCO X3 Pro (crDroid 12.13 / Android 16):
+Captured on POCO X3 Pro (crDroid 12.13 / Android 16) running BakaSU `v4.2.0-rc3` and SuSFS `v1.5.5`:
 
 <div align="center">
   <img src="media/bakasu_susfs_proof.png" alt="BakaSU + SuSFS Proof" width="360" />
@@ -101,55 +91,64 @@ Here is proof of the kernel running with **BakaSU v4.2.0-rc3**, **SuSFS v1.5.5**
   <a href="https://github.com/fakfekrill-glitch/xiaomi_sm8150_kernel_e404_modified/releases/download/R3-SuSFS-v1.5.5/E404-BakaSU-SuSFS-MBanking-Proof.mp4">
     <img src="https://img.shields.io/badge/▶_Watch_Video_Proof-M--Banking_Working_&_Bypass-success?style=for-the-badge&logo=youtube" alt="Watch Proof Video" />
   </a>
-  <p><i>Click badge above to play/download the video demonstration (.mp4)</i></p>
+  <p><i>Click the badge above to play or download the video demonstration (.mp4)</i></p>
 </div>
 
 ---
 
-## 📦 Kernel Variants & Flashing Guide
-
-We provide 2 distinct flashable variants:
+## Kernel Variants and Flashing Guide
 
 | Variant | Recommended OS | Description |
 |---|---|---|
-| **`RE404-VAYU-ResukiSU-SuSFS-BPF.zip`** | **Android 15, 16, 17+** | Full eBPF subsystem enabled. Required for modern Android network offload & tethering. |
-| **`RE404-VAYU-ResukiSU-SuSFS-NON-BPF.zip`** | **Android 12, 13, 14, MIUI, HyperOS** | Standard netd compatibility without eBPF conflicts on legacy vendor blobs. |
+| **`RE404-VAYU-ResukiSU-SuSFS-BPF.zip`** | Android 15, 16, 17+ | Enables `CONFIG_ANDROID_16_BPF=y` for modern Android networking (`NetBpfLoad`, offload, tethering). |
+| **`RE404-VAYU-ResukiSU-SuSFS-NON-BPF.zip`** | Android 12, 13, 14, MIUI, HyperOS | Standard netd compatibility without Android 15/16+ BPF changes. |
 
-### How to Flash:
-1. Reboot into custom recovery (**OrangeFox Recovery** or **TWRP** recommended).
-2. (Optional) Backup your existing `boot` partition.
-3. Flash the selected AnyKernel3 zip file.
-4. Wipe Dalvik & Cache.
-5. Reboot to system.
-6. Install the **KernelSU / BakaSU Manager** app.
+### How to Flash
+1. Reboot to custom recovery (OrangeFox Recovery or TWRP recommended).
+2. Back up your current `boot` partition if needed.
+3. Flash the zip matching your ROM.
+4. Reboot to system.
+5. Install the ReSukiSU / BakaSU Manager app if not already present.
+
+### Post-Flash Verification (Terminal / Root Shell)
+```sh
+e404
+cat /sys/kernel/mm/lru_gen/enabled /sys/kernel/mm/lru_gen/min_ttl_ms /sys/module/wakeup/parameters/enable_wakelock_blocker
+# Expected:
+# 0x0001
+# 0
+# Y
+```
 
 ---
 
-## 🛠️ Building From Source
+## Building From Source
 
-### Compile Command
+Place `AnyKernel3` and the compiler toolchain (such as `toolchains/neutron-clang`) in the parent directory alongside the cloned kernel directory.
+
 ```bash
 # Clone the repository
 git clone https://github.com/fakfekrill-glitch/xiaomi_sm8150_kernel_e404_modified -b main-susfs kernel
 cd kernel
 
-# For BPF variant (Android 15, 16, 17+):
+# BPF variant (Android 15, 16, 17+):
 ./compile.sh vaybpf sus bpf neutron
 
-# For Non-BPF variant (Android 12, 13, 14, MIUI):
+# Non-BPF variant (Android 12, 13, 14, MIUI, HyperOS):
 ./compile.sh vayu sus neutron
 ```
 
 ---
 
-## 📜 Credits & Acknowledgments
-- [@deutereium](https://github.com/deutereium) for original E404 kernel source & R3 backports
+## Credits and Acknowledgments
+- [@deutereium](https://github.com/deutereium) for the E404 kernel source and Android 15 to 17 backports
 - [Baka-SU / ReSukiSU Team](https://github.com/Baka-SU)
 - [simonpunk](https://gitlab.com/simonpunk/susfs4ksu) for SuSFS
 - [tiann](https://github.com/tiann) for KernelSU
 - [osm0sis](https://github.com/osm0sis) for AnyKernel3
-- [dakkshesh07](https://github.com/dakkshesh07) for Neutron Clang toolchain
-- **Dalu Raziq Hidayatullah** ([@fakfekrill-glitch](https://github.com/fakfekrill-glitch)) for porting, debugging non-GKI 4.14 SuSFS fixes, and packaging.
+- [dakkshesh07](https://github.com/dakkshesh07) for Neutron Clang
+- Yu Zhao and Linux MM contributors for Multi-Gen LRU (MGLRU)
+- Dalu Raziq Hidayatullah ([@fakfekrill-glitch](https://github.com/fakfekrill-glitch)) for porting, non-GKI 4.14 fixes, tuning, and maintenance
 
 ---
-**License**: [GPL-2.0](LICENSE)
+License: [GPL-2.0](LICENSE)

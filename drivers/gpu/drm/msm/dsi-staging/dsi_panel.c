@@ -4593,6 +4593,7 @@ int dsi_panel_apply_cabc_mode(struct dsi_panel *panel)
 	*/
 	return 0;
 
+#if 0
 	static const enum dsi_cmd_set_type type_map[] = {
 		DSI_CMD_SET_DISP_CABC_OFF,
 		DSI_CMD_SET_DISP_CABC_UI_ON,
@@ -4614,4 +4615,5 @@ int dsi_panel_apply_cabc_mode(struct dsi_panel *panel)
 	mutex_unlock(&panel->panel_lock);
 
 	return rc;
+#endif
 }

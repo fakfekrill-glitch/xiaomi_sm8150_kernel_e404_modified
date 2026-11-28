@@ -190,7 +190,7 @@ zipbuild() {
  ║      >> E404 CYBERNETIC KERNEL <<      ║
  ║  • Target  : Android 15 / 16 / 17+     ║
  ║  • Core    : eBPF + ReSukiSU + SuSFS   ║
- ║  • Engine  : BBRplus FQ | Sched 120Hz  ║
+ ║  • Engine  : MGLRU | DeepSleep | BBR+  ║
  ║  • Device  : POCO X3 Pro (vayu/bhima)  ║
  ║  • Author  : Dalu Raziq Hidayatullah   ║
  ╚════════════════════════════════════════╝
@@ -208,7 +208,7 @@ EOF
  ║      >> E404 CYBERNETIC KERNEL <<      ║
  ║  • Target  : Android 12 - 14 / HyperOS ║
  ║  • Core    : Non-BPF + ReSukiSU + SuSFS║
- ║  • Engine  : BBRplus FQ | Sched 120Hz  ║
+ ║  • Engine  : MGLRU | DeepSleep | BBR+  ║
  ║  • Device  : POCO X3 Pro (vayu/bhima)  ║
  ║  • Author  : Dalu Raziq Hidayatullah   ║
  ╚════════════════════════════════════════╝
@@ -330,6 +330,11 @@ makebuild() {
     cp "$K_IMG" "$AK3_DIR/Image"
     cp "$K_DTB" "$AK3_DIR/${TARGET}-dtb"
     cp "$K_DTB" "$AK3_DIR/dtb"
+    if [[ -f "$KERNEL_DIR/scripts/e404" ]]; then
+        mkdir -p "$AK3_DIR/tools"
+        cp -f "$KERNEL_DIR/scripts/e404" "$AK3_DIR/tools/e404"
+        chmod 0755 "$AK3_DIR/tools/e404"
+    fi
 
 }
 

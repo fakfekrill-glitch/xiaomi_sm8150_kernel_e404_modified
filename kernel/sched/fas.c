@@ -177,9 +177,9 @@ static void fas_do_cmdbatch_boost_work_fn(struct work_struct *work)
 
 	if (interval > 0 && interval < FAS_ADAPTIVE_MAX_MS) {
 		window_ms = (unsigned int)(interval * FAS_ADAPTIVE_MULT / 10);
-		window_ms = clamp(window_ms,
-				  FAS_ADAPTIVE_MIN_MS,
-				  FAS_ADAPTIVE_MAX_MS);
+		window_ms = clamp_t(unsigned int, window_ms,
+				    FAS_ADAPTIVE_MIN_MS,
+				    FAS_ADAPTIVE_MAX_MS);
 	} else {
 		window_ms = FAS_ADAPTIVE_MIN_MS;
 	}

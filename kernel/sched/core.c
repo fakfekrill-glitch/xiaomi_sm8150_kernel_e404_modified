@@ -4009,6 +4009,7 @@ context_switch(struct rq *rq, struct task_struct *prev,
 		 */
 
 		switch_mm_irqs_off(prev->active_mm, next->mm, next);
+		lru_gen_use_mm_task(next->mm, next);
 
 		if (!prev->mm) {                        // from kernel
 			/* will mmdrop() in finish_task_switch(). */
@@ -6439,7 +6440,7 @@ SYSCALL_DEFINE3(sched_getaffinity, pid_t, pid, unsigned int, len,
 
 	ret = sched_getaffinity(pid, mask);
 	if (ret == 0) {
-		unsigned int retlen = min(len, cpumask_size());
+		unsigned int retlen = min_t(size_t, len, cpumask_size());
 
 		if (copy_to_user(user_mask_ptr, mask, retlen))
 			ret = -EFAULT;

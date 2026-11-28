@@ -128,13 +128,15 @@ static int __init fast_charge_init(void)
 		return -ENOMEM;
 
 	ret = sysfs_create_group(fast_charge_kobj, &fast_charge_attr_group);
-	if (ret)
+	if (ret) {
 		kobject_put(fast_charge_kobj);
+		return ret;
+	}
 
 	INIT_DELAYED_WORK(&fast_charge_work, fast_charge_work_fn);
 	schedule_delayed_work(&fast_charge_work, msecs_to_jiffies(3000));
 
-	return ret;
+	return 0;
 }
 
 static void __exit fast_charge_exit(void)
