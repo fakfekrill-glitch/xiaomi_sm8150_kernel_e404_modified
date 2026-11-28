@@ -356,6 +356,8 @@ static void vmpressure_global(gfp_t gfp, unsigned long scanned, bool critical,
 
 	if (critical)
 		scanned = calculate_vmpressure_win();
+	else if (!scanned)
+		return;
 
 	spin_lock_irqsave(&vmpr->sr_lock, flags);
 	if (scanned) {
