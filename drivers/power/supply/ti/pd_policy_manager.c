@@ -747,6 +747,7 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 	int effective_fcc_val = 0;
 	int effective_fcc_taper = 0;
 	int thermal_level = 0;
+	int capacity = 0;
 	static int curr_fcc_limit, curr_ibus_limit;
 
 	static int ibus_limit;
@@ -844,6 +845,7 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 		usbpd_pm_check_cp_sec_enabled(pdpm);
 
 	pd_get_batt_current_thermal_level(pdpm, &thermal_level);
+	pd_get_batt_capacity(pdpm, &capacity);
 
 	pdpm->is_temp_out_fc2_range = pd_disable_cp_by_jeita_status(pdpm);
 	pr_debug("is_temp_out_fc2_range:%d\n", pdpm->is_temp_out_fc2_range);
@@ -887,7 +889,8 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 		cool_overcharge_timer = 0;
 	}
 	/* charge pump taper charge */
-	if (pdpm->cp.vbat_volt > pm_config.bat_volt_lp_lmt - TAPER_VOL_HYS
+	if (pdpm->cp.vbat_volt >= pm_config.bat_volt_lp_lmt
+			&& capacity >= 100
 			&& pdpm->cp.ibat_curr < pm_config.fc2_taper_current) {
 		if (fc2_taper_timer++ > TAPER_TIMEOUT) {
 			pr_info("charge pump taper charging done\n");
@@ -972,8 +975,8 @@ static int usbpd_pm_sm(struct usbpd_pm *pdpm)
 
 		if (pdpm->cp.vbat_volt < pm_config.min_vbat_for_cp) {
 			pr_info("batt_volt %d, waiting...\n", pdpm->cp.vbat_volt);
-		} else if ((pdpm->cp.vbat_volt > pm_config.bat_volt_lp_lmt - 50)
-			|| (capacity >= 95)) {
+		} else if ((pdpm->cp.vbat_volt >= pm_config.bat_volt_lp_lmt)
+			&& (capacity >= 100)) {
 			pr_info("batt_volt %d is too high for cp,\
 					charging with switch charger\n",
 					pdpm->cp.vbat_volt);

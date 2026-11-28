@@ -87,7 +87,7 @@ enum hvdcp3_type {
  */
 #define JEITA_HYSTERESIS			20
 
-#define HIGH_CAPACITY_TRH			90
+#define HIGH_CAPACITY_TRH			100
 
 
 struct flash2_policy {

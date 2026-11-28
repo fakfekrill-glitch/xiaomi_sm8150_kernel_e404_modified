@@ -6159,6 +6159,8 @@ int smblib_set_prop_pd_active(struct smb_charger *chg,
 		vote(chg->usb_icl_votable, USB_PSY_VOTER, false, 0);
 		vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, false, 0);
 
+		chg->pd_verifed = true;
+
 		/*set the icl to PD_UNVERIFED_CURRENT when pd is not verifed*/
 		if (!chg->pd_verifed) {
 			rc = vote(chg->fcc_votable, PD_VERIFED_VOTER, true, PD_UNVERIFED_CURRENT);
@@ -7553,12 +7555,12 @@ int smblib_get_quick_charge_type(struct smb_charger *chg)
 		return 0;
 
 	/* davinic do not need to report this type */
-	if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_PD)
-				&& chg->pd_verifed && chg->qc_class_ab) {
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_PD) {
 		return QUICK_CHARGE_TURBE;
 	}
 
-	if (chg->is_qc_class_b || chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5)
+	if (chg->is_qc_class_b || chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5
+			|| chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3)
 		return QUICK_CHARGE_FLASH;
 
 	if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_DCP) && chg->hvdcp_recheck_status)

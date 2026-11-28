@@ -1,5 +1,5 @@
 # E404 Custom Kernel for POCO X3 Pro (vayu / bhima)
-Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Deep Sleep Wakelock Blocker, and eBPF
+Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Turbo Charge 6A (up to 100%), and eBPF
 
 ![Device](https://img.shields.io/badge/Device-POCO%20X3%20Pro%20(vayu%2Fbhima)-blue)
 ![SoC](https://img.shields.io/badge/SoC-Snapdragon%20860%20(SM8150--AC)-orange)
@@ -27,7 +27,7 @@ Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Deep Sleep Wakeloc
 ## Device and OS Compatibility
 - Device: Xiaomi POCO X3 Pro (`vayu` / `bhima`), Qualcomm Snapdragon 860 (`SM8150-AC`)
 - Kernel base: Linux `4.14.356` (reports `4.19.404R` via `scripts/POST-GEN.sh` for modern Android compatibility)
-- Verified on crDroid 12.13 (Android 16) with MGLRU, BPF, SuSFS v1.5.5, and Deep Sleep Wakelock Blocker active
+- Verified on crDroid 12.13 (Android 16) with MGLRU, BPF, SuSFS v1.5.5, and 6A Turbo Charge active
 - Compatible with AOSP custom ROMs from Android 12 to Android 17 (Baklava)
 - Compatible with MIUI 12.5, 13, 14 and HyperOS using the Non-BPF build
 
@@ -56,14 +56,10 @@ Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Deep Sleep Wakeloc
 - Integrates SuSFS `v1.5.5` (`SUS_PATH`, `SUS_MOUNT`, `SUS_KSTAT`, `SPOOF_UNAME`, `SPOOF_CMDLINE_OR_BOOTCONFIG`, `OPEN_REDIRECT`, `SUS_MAP`, and KernelSU/SuSFS symbol hiding)
 - Fixes `sucompat` `faccessat` and `stat` user-pointer handling on non-GKI 4.14 kernels and uses heap allocations in `fs/susfs/` to avoid ThinLTO stack overflow warnings
 
-### 4. Deep Sleep Wakelock Blocker
-- Built-in Boeffla-style wakelock blocker (`drivers/base/power/wakeup.c`), active by default (`enable_wakelock_blocker = Y`)
-- Shares spinlock synchronization (`wakelock_blocker_lock`) across both `/sys/module/wakeup/parameters/blocked_wakelocks` and `/sys/class/misc/boeffla_wakelock_blocker/wakelock_blocker`
-- Default blocklist targets background network wakelocks: `wlan_pno_wl;wlan_netlink_wl;wlan_wow_wl;wlan_extscan_wl;netmgr_wl;IPA_WS;qcom_rx_wakelock`
-- Excludes `timerfd` and `sensor_ind` from the default blocklist so alarms, timers, sensors, and push notifications wake the device reliably during Deep Sleep
-
-### 5. Fast Charging (6A / 3A) and Battery Profiles
-- Fast charge override (`/sys/kernel/fast_charge/force_fast_charge`) defaults to `1`, overriding `FCC` to `6,000,000 uA` (6A) and `USB_ICL` to `3,000,000 uA` (3A) while clearing thermal and slow-charging throttles
+### 4. Fast Charging (6A Turbo Charge to 100%) and Battery Profiles
+- Fast charge override (`/sys/kernel/fast_charge/force_fast_charge`) active by default (`1`), forcing `FCC` to `6,000,000 uA` (6A) all the way up to 100% battery capacity without premature CV tapering or early Charge Pump exit
+- Preserves dynamic `USB_ICL` hardware APSD and QC3 500mA voltage negotiation, preventing VBUS collapse on plug-in
+- Enables full Charge Pump operation (`BQ25970` / `LN8000`) and reports authentic Turbo/Flash Charge status across both AOSP and MIUI
 - Switchable Fuel Gauge profiles via `/sys/e404/batt_profile` or `e404_args`:
   - `0` (`batt_def`): OEM battery (`5160 mAh`)
   - `1` (`batt_6k`): `6000 mAh` custom profile (Default)
@@ -71,12 +67,12 @@ Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Deep Sleep Wakeloc
 - Supports arbitrary capacity reporting via `/sys/e404/batt_capacity_mah`
 - Silences `ds28e16` authentication `dmesg` log spam on aftermarket batteries without OEM crypto ICs
 
-### 6. Networking, Storage, and 120Hz Tuning
+### 5. Networking, Storage, and 120Hz Tuning
 - Sets `bbrplus` as the default TCP congestion algorithm (`bbr` and `westwood` also built in) paired with `fq` as the default qdisc (`CONFIG_DEFAULT_NET_SCH="fq"`), TCP Fast Open enabled (`client | server`), and `sysctl_tcp_slow_start_after_idle = 0`
 - Enables F2FS compression with `LZO`, `LZ4`, and `ZSTD`
 - Lowers `schedutil` rate limit to `1000 us` (1 ms) for 120Hz frame pacing, enables Prime core touch boost in `cpu-boost`, and enables `CONFIG_IRQ_SBALANCE=y`
 
-### 7. Built-in `e404` CLI Fetch Tool
+### 6. Built-in `e404` CLI Fetch Tool
 Flashing either AnyKernel3 zip installs the `e404` POSIX/mksh script automatically into available paths (`/data/adb/ksu/bin`, `/data/adb/magisk`, Termux `usr/bin`, or `/data/local/tmp`). Run `e404` in Termux or MT Manager Terminal to view CPU usage and cluster clocks, Adreno 640 GPU load and frequency, RAM and ZRAM compression ratios, Wi-Fi IP/MAC, battery telemetry, TCP congestion control, Deep Sleep status, and MGLRU status.
 
 ---
@@ -113,11 +109,11 @@ Captured on POCO X3 Pro (crDroid 12.13 / Android 16) running BakaSU `v4.2.0-rc3`
 ### Post-Flash Verification (Terminal / Root Shell)
 ```sh
 e404
-cat /sys/kernel/mm/lru_gen/enabled /sys/kernel/mm/lru_gen/min_ttl_ms /sys/module/wakeup/parameters/enable_wakelock_blocker
+cat /sys/kernel/mm/lru_gen/enabled /sys/kernel/mm/lru_gen/min_ttl_ms /sys/kernel/fast_charge/force_fast_charge
 # Expected:
 # 0x0001
 # 0
-# Y
+# 1
 ```
 
 ---

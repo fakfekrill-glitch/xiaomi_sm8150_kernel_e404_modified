@@ -657,7 +657,8 @@ static int cp_flash2_charge(unsigned int port)
 		pr_info("slowly charging feature is enabled!\n");
 		return CP_ENABLE_FAIL;
 	}
-	if (pm_state.bq2597x.vbat_volt > sys_config.bat_volt_lp_lmt - 100 &&
+	if (pm_state.capacity >= 100 &&
+			pm_state.bq2597x.vbat_volt >= sys_config.bat_volt_lp_lmt &&
 			pm_state.bq2597x.ibat_curr < sys_config.fc2_taper_current) {
 		if (fc2_taper_timer++ > TAPER_TIMEOUT) {
 			fc2_taper_timer = 0;
@@ -765,8 +766,8 @@ void cp_statemachine(unsigned int port)
 				pr_info("thermal too high or batt temp out of range or slowly charging, waiting...\n");
 			} else if (pm_state.bq2597x.vbat_volt < sys_config.min_vbat_start_flash2) {
 				cp_move_state(CP_STATE_SW_ENTRY);
-			} else if (pm_state.bq2597x.vbat_volt > sys_config.bat_volt_lp_lmt - 100
-					|| pm_state.capacity >= HIGH_CAPACITY_TRH) {
+			} else if (pm_state.capacity >= HIGH_CAPACITY_TRH
+					|| pm_state.bq2597x.vbat_volt >= sys_config.bat_volt_lp_lmt) {
 				pm_state.sw_near_cv = true;
 				cp_move_state(CP_STATE_SW_ENTRY);
 			} else {
@@ -815,8 +816,8 @@ void cp_statemachine(unsigned int port)
 			pr_info("thermal(%d) too high or batt temp out of range\n", thermal_level);
 		}
 		cp_get_batt_capacity();
-		if (pm_state.bq2597x.vbat_volt > sys_config.bat_volt_lp_lmt - 100
-					|| pm_state.capacity >= HIGH_CAPACITY_TRH) {
+		if (pm_state.capacity >= HIGH_CAPACITY_TRH
+					|| pm_state.bq2597x.vbat_volt >= sys_config.bat_volt_lp_lmt) {
 				pm_state.sw_near_cv = true;
 		}
 		if (!pm_state.sw_near_cv && !recovery) {
