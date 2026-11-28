@@ -1057,7 +1057,7 @@ static int pd_eval_src_caps(struct usbpd *pd)
 	u32 first_pdo = pd->received_pdos[0];
 #if defined(CONFIG_MACH_XIAOMI_VAYU) || defined(CONFIG_MACH_XIAOMI_NABU)
 	int max_volt, min_volt, max_curr;
-	int pps_min_power = 0;
+	int pps_max_power = 0;
 #endif
 
 	if (PD_SRC_PDO_TYPE(first_pdo) != PD_SRC_PDO_TYPE_FIXED) {
@@ -1101,16 +1101,17 @@ static int pd_eval_src_caps(struct usbpd *pd)
 			min_volt = PD_APDO_MIN_VOLT(pdo) * 100;
 			max_curr = PD_APDO_MAX_CURR(pdo) * 50;
 
-			if (pps_min_power < max_volt * max_curr || pps_min_power == 0) {
-				pps_min_power = max_volt * max_curr;
-				if (pps_min_power < USBPD_WEAK_PPS_POWER)
-					pd->pps_weak_limit = true;
-			}
+			if (max_volt * max_curr > pps_max_power)
+				pps_max_power = max_volt * max_curr;
 		}
 		usbpd_info(&pd->dev, "%s max_volt:%d,min_volt:%d,max_curr:%d\n",
 				(PD_SRC_PDO_TYPE(pdo) == PD_SRC_PDO_TYPE_AUGMENTED) ? "PPS" : "PD2.0",
 				max_volt, min_volt, max_curr);
 	}
+	if (pps_found && pps_max_power < USBPD_WEAK_PPS_POWER)
+		pd->pps_weak_limit = true;
+	else
+		pd->pps_weak_limit = false;
 #endif
 
 	val.intval = pps_found ?

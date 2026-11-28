@@ -72,8 +72,8 @@ enum hvdcp3_type {
 	HVDCP3_CLASSB_27W,
 };
 
-#define HVDCP3_CLASS_B_BAT_CURRENT_MA			5400
-#define HVDCP3_CLASS_B_BUS_CURRENT_MA			2700
+#define HVDCP3_CLASS_B_BAT_CURRENT_MA			6000
+#define HVDCP3_CLASS_B_BUS_CURRENT_MA			3000
 #define HVDCP3_CLASS_A_BAT_CURRENT_MA			3600
 #define HVDCP3_CLASS_A_BUS_CURRENT_MA			2100
 #define MAX_THERMAL_LEVEL			13
@@ -87,7 +87,7 @@ enum hvdcp3_type {
  */
 #define JEITA_HYSTERESIS			20
 
-#define HIGH_CAPACITY_TRH			90
+#define HIGH_CAPACITY_TRH			100
 
 
 struct flash2_policy {

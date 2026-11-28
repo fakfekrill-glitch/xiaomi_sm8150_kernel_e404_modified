@@ -682,10 +682,11 @@ static void usbpd_pm_evaluate_src_caps(struct usbpd_pm *pdpm)
 	for (i = 0; i < PDO_MAX_NUM; i++) {
 		if (pdpm->pdo[i].type == PD_SRC_PDO_TYPE_AUGMENTED
 			&& pdpm->pdo[i].pps && pdpm->pdo[i].pos) {
-			if (pdpm->pdo[i].max_volt_mv >= pdpm->apdo_max_volt
-					&& pdpm->pdo[i].curr_ma >= pdpm->apdo_max_curr
-					&& pdpm->pdo[i].max_volt_mv <= APDO_MAX_VOLT) {
-				pdpm->apdo_max_volt = pdpm->pdo[i].max_volt_mv;
+			if (pdpm->pdo[i].min_volt_mv <= 7000
+					&& pdpm->pdo[i].max_volt_mv >= pdpm->apdo_max_volt
+					&& pdpm->pdo[i].curr_ma >= pdpm->apdo_max_curr) {
+				pdpm->apdo_max_volt = min_t(int,
+						pdpm->pdo[i].max_volt_mv, APDO_MAX_VOLT);
 				pdpm->apdo_max_curr = pdpm->pdo[i].curr_ma;
 				pdpm->apdo_selected_pdo = pdpm->pdo[i].pos;
 				pdpm->pps_supported = true;
@@ -698,8 +699,6 @@ static void usbpd_pm_evaluate_src_caps(struct usbpd_pm *pdpm)
 				pdpm->apdo_selected_pdo,
 				pdpm->apdo_max_volt,
 				pdpm->apdo_max_curr);
-		if (pdpm->apdo_max_curr <= LOW_POWER_PPS_CURR_THR)
-			pdpm->apdo_max_curr = XIAOMI_LOW_POWER_PPS_CURR_MAX;
 		pval.intval = (pdpm->apdo_max_volt / 1000) * (pdpm->apdo_max_curr / 1000);
 		power_supply_set_property(pdpm->usb_psy,
 				POWER_SUPPLY_PROP_APDO_MAX, &pval);
@@ -732,6 +731,22 @@ static void usbpd_update_pps_status(struct usbpd_pm *pdpm)
 	}
 }
 
+static bool usbpd_pm_fast_ramp_active(struct usbpd_pm *pdpm)
+{
+	int eff_fcc;
+	int fcc_lmt;
+
+	if (pdpm->cp.vbat_volt >= pm_config.bat_volt_lp_lmt - 100)
+		return false;
+
+	eff_fcc = usbpd_get_effective_fcc_val(pdpm);
+	fcc_lmt = eff_fcc > 0 ?
+		min(pm_config.bat_curr_lp_lmt, eff_fcc) :
+		pm_config.bat_curr_lp_lmt;
+
+	return pdpm->cp.ibat_curr < fcc_lmt - 1200;
+}
+
 #define TAPER_TIMEOUT	(25000 / PM_WORK_RUN_INTERVAL)
 #define IBUS_CHANGE_TIMEOUT  (2500 / PM_WORK_RUN_INTERVAL)
 static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
@@ -747,6 +762,7 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 	int effective_fcc_val = 0;
 	int effective_fcc_taper = 0;
 	int thermal_level = 0;
+	int capacity = 0;
 	static int curr_fcc_limit, curr_ibus_limit;
 
 	static int ibus_limit;
@@ -844,6 +860,7 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 		usbpd_pm_check_cp_sec_enabled(pdpm);
 
 	pd_get_batt_current_thermal_level(pdpm, &thermal_level);
+	pd_get_batt_capacity(pdpm, &capacity);
 
 	pdpm->is_temp_out_fc2_range = pd_disable_cp_by_jeita_status(pdpm);
 	pr_debug("is_temp_out_fc2_range:%d\n", pdpm->is_temp_out_fc2_range);
@@ -887,7 +904,8 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 		cool_overcharge_timer = 0;
 	}
 	/* charge pump taper charge */
-	if (pdpm->cp.vbat_volt > pm_config.bat_volt_lp_lmt - TAPER_VOL_HYS
+	if (pdpm->cp.vbat_volt >= pm_config.bat_volt_lp_lmt
+			&& capacity >= 100
 			&& pdpm->cp.ibat_curr < pm_config.fc2_taper_current) {
 		if (fc2_taper_timer++ > TAPER_TIMEOUT) {
 			pr_info("charge pump taper charging done\n");
@@ -902,6 +920,9 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 	 * thermal mitigation*/
 
 	steps = min(sw_ctrl_steps, hw_ctrl_steps);
+	if (steps > 0 && usbpd_pm_fast_ramp_active(pdpm) &&
+	    ibus_total < ibus_limit - 600)
+		steps = 2;
 	pr_info("steps: %d, sw_ctrl_steps:%d, hw_ctrl_steps:%d\n", steps, sw_ctrl_steps, hw_ctrl_steps);
 	pdpm->request_voltage += steps * STEP_MV;
 
@@ -972,8 +993,8 @@ static int usbpd_pm_sm(struct usbpd_pm *pdpm)
 
 		if (pdpm->cp.vbat_volt < pm_config.min_vbat_for_cp) {
 			pr_info("batt_volt %d, waiting...\n", pdpm->cp.vbat_volt);
-		} else if ((pdpm->cp.vbat_volt > pm_config.bat_volt_lp_lmt - 50)
-			|| (capacity >= 95)) {
+		} else if ((pdpm->cp.vbat_volt >= pm_config.bat_volt_lp_lmt)
+			&& (capacity >= 100)) {
 			pr_info("batt_volt %d is too high for cp,\
 					charging with switch charger\n",
 					pdpm->cp.vbat_volt);
@@ -1182,9 +1203,20 @@ static void usbpd_pm_workfunc(struct work_struct *work)
 	pr_info("%s:pd_bat_volt_lp_lmt=%d, vbatt_now=%d\n",
 			__func__, pm_config.bat_volt_lp_lmt, pdpm->cp.vbat_volt);
 
-	if (!usbpd_pm_sm(pdpm) && pdpm->pd_active)
+	if (!usbpd_pm_sm(pdpm) && pdpm->pd_active) {
+		int interval_ms = PM_WORK_RUN_INTERVAL;
+
+		if (pdpm->state == PD_PM_STATE_FC2_ENTRY_1 ||
+		    pdpm->state == PD_PM_STATE_FC2_ENTRY_2 ||
+		    pdpm->state == PD_PM_STATE_FC2_ENTRY_3) {
+			interval_ms = 150;
+		} else if (pdpm->state == PD_PM_STATE_FC2_TUNE &&
+			   usbpd_pm_fast_ramp_active(pdpm)) {
+			interval_ms = 250;
+		}
 		schedule_delayed_work(&pdpm->pm_work,
-				msecs_to_jiffies(PM_WORK_RUN_INTERVAL));
+				msecs_to_jiffies(interval_ms));
+	}
 }
 
 static void usbpd_pm_disconnect(struct usbpd_pm *pdpm)

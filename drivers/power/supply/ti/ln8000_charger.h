@@ -238,11 +238,11 @@ enum ln8000_adc_hibernate_delay_desc {
 
 /* bus protection values for QC */
 #define BUS_OVP_FOR_QC                  13000000 /* ln8000 didn't used 10V, (support tot 6.5V, 11V, 12V, 13V) */
-#define BUS_OVP_ALARM_FOR_QC			9500000
+#define BUS_OVP_ALARM_FOR_QC			11000000
 #define BUS_OCP_FOR_QC_CLASS_A			3250000
 #define BUS_OCP_ALARM_FOR_QC_CLASS_A    2000000
 #define BUS_OCP_FOR_QC_CLASS_B			3750000
-#define BUS_OCP_ALARM_FOR_QC_CLASS_B	2800000
+#define BUS_OCP_ALARM_FOR_QC_CLASS_B	3500000
 #define BUS_OCP_FOR_QC3P5_CLASS_A		3000000
 #define BUS_OCP_ALARM_FOR_QC3P5_CLASS_A	2500000
 #define BUS_OCP_FOR_QC3P5_CLASS_B		3500000

@@ -128,7 +128,7 @@ enum print_reason {
 #define WEAK_CHG_STORM_COUNT	8
 
 /* defined for distinguish qc class_a and class_b */
-#define VOL_THR_FOR_QC_CLASS_AB		12300000
+#define VOL_THR_FOR_QC_CLASS_AB		12000000
 #define COMP_FOR_LOW_RESISTANCE_CABLE	100000
 #define QC_CLASS_A_CURRENT_UA		3600000
 #define HVDCP_CLASS_A_MAX_UA		2500000
@@ -173,7 +173,7 @@ enum print_reason {
 /* defined for qc2_unsupported */
 #define QC2_UNSUPPORTED_UA		1800000
 /* defined for HVDCP2 */
-#define HVDCP2_CURRENT_UA		1500000
+#define HVDCP2_CURRENT_UA		2000000
 
 /* defined for charger type recheck */
 #define CHARGER_RECHECK_DELAY_MS	30000
@@ -192,7 +192,7 @@ enum print_reason {
 #define SDP_100_MA			100000
 #define SDP_CURRENT_UA			500000
 #define CDP_CURRENT_UA			1500000
-#define DCP_CURRENT_UA			3000000
+#define DCP_CURRENT_UA			2400000
 #define HVDCP_CURRENT_UA		3000000
 #define HVDCP_CLASS_B_CURRENT_UA		3100000
 #define HVDCP_START_CURRENT_UA_FOR_BQ	500000

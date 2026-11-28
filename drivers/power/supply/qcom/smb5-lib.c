@@ -5475,6 +5475,24 @@ int smblib_get_prop_input_current_max(struct smb_charger *chg,
 		return 0;
 	}
 
+	if (chg->use_bq_pump &&
+	    is_client_vote_enabled(chg->usb_icl_votable, MAIN_CHG_VOTER)) {
+		if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_PD) {
+			icl_ua = get_client_vote(chg->usb_icl_votable, PD_VOTER);
+			if (icl_ua > 0) {
+				val->intval = icl_ua;
+				return 0;
+			}
+		} else if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3 ||
+			   chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5) {
+			icl_ua = get_client_vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER);
+			if (icl_ua > 0) {
+				val->intval = icl_ua;
+				return 0;
+			}
+		}
+	}
+
 	return smblib_get_charge_param(chg, &chg->param.icl_stat, &val->intval);
 }
 
@@ -5735,7 +5753,7 @@ int smblib_set_prop_pd_current_max(struct smb_charger *chg,
 	return rc;
 }
 
-#define FLOAT_CHARGER_UA		1000000
+#define FLOAT_CHARGER_UA		2000000
 #define SUSPEND_CURRENT_UA		2000
 static int smblib_handle_usb_current(struct smb_charger *chg,
 					int usb_current)
@@ -6159,12 +6177,11 @@ int smblib_set_prop_pd_active(struct smb_charger *chg,
 		vote(chg->usb_icl_votable, USB_PSY_VOTER, false, 0);
 		vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, false, 0);
 
-		/*set the icl to PD_UNVERIFED_CURRENT when pd is not verifed*/
-		if (!chg->pd_verifed) {
-			rc = vote(chg->fcc_votable, PD_VERIFED_VOTER, true, PD_UNVERIFED_CURRENT);
-			if (rc < 0)
-				smblib_err(chg, "Couldn't unvote PD_VERIFED_VOTER, rc=%d\n", rc);
-		}
+		chg->pd_verifed = true;
+		if (chg->support_ffc)
+			smblib_set_fastcharge_mode(chg, true);
+		else
+			vote(chg->fcc_votable, PD_VERIFED_VOTER, false, 0);
 
 		/*
 		 * For PPS, Charge Pump is preferred over parallel charger if
@@ -7553,12 +7570,13 @@ int smblib_get_quick_charge_type(struct smb_charger *chg)
 		return 0;
 
 	/* davinic do not need to report this type */
-	if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_PD)
-				&& chg->pd_verifed && chg->qc_class_ab) {
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_PD ||
+	    chg->is_qc_class_b) {
 		return QUICK_CHARGE_TURBE;
 	}
 
-	if (chg->is_qc_class_b || chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5)
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5
+			|| chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3)
 		return QUICK_CHARGE_FLASH;
 
 	if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_DCP) && chg->hvdcp_recheck_status)
