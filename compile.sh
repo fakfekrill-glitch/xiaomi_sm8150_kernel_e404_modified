@@ -190,7 +190,7 @@ zipbuild() {
  ║      >> E404 CYBERNETIC KERNEL <<      ║
  ║  • Target  : Android 15 / 16 / 17+     ║
  ║  • Core    : eBPF + ReSukiSU + SuSFS   ║
- ║  • Engine  : MGLRU | DeepSleep | BBR+  ║
+ ║  • Engine  : MGLRU | FastChg6A | BBR+  ║
  ║  • Device  : POCO X3 Pro (vayu/bhima)  ║
  ║  • Author  : Dalu Raziq Hidayatullah   ║
  ╚════════════════════════════════════════╝
@@ -208,7 +208,7 @@ EOF
  ║      >> E404 CYBERNETIC KERNEL <<      ║
  ║  • Target  : Android 12 - 14 / HyperOS ║
  ║  • Core    : Non-BPF + ReSukiSU + SuSFS║
- ║  • Engine  : MGLRU | DeepSleep | BBR+  ║
+ ║  • Engine  : MGLRU | FastChg6A | BBR+  ║
  ║  • Device  : POCO X3 Pro (vayu/bhima)  ║
  ║  • Author  : Dalu Raziq Hidayatullah   ║
  ╚════════════════════════════════════════╝

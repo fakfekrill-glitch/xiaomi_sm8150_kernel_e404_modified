@@ -110,10 +110,10 @@ static void do_input_boost(struct work_struct *work)
 		i_sync_info = &per_cpu(sync_info, i);
 		if (fps <= 90) {
 			i_sync_info->input_boost_min = (i <= 3) ? 1401600 :
-						       (i <= 6) ? 748800 : 825600;
+						       (i <= 6) ? 748800 : 0;
 		} else {
 			i_sync_info->input_boost_min = (i <= 3) ? 1708800 :
-						       (i <= 6) ? 940800 : 1056000;
+						       (i <= 6) ? 940800 : 0;
 		}
 	}
 
