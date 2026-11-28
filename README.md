@@ -57,10 +57,10 @@ Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Turbo Charge 6A (u
 - Fixes `sucompat` `faccessat` and `stat` user-pointer handling on non-GKI 4.14 kernels and uses heap allocations in `fs/susfs/` to avoid ThinLTO stack overflow warnings
 
 ### 4. Fast Charging (6A Turbo Charge to 100%) and Battery Profiles
-- Fast charge override (`/sys/kernel/fast_charge/force_fast_charge`) active by default (`1`), forcing `FCC` up to `6,000,000 uA` (6A) while keeping Charge Pump active up to 100% battery capacity
-- Preserves dynamic `USB_ICL` hardware APSD and QC3 500mA voltage negotiation, preventing VBUS collapse on plug-in
-- Enables universal compatibility for aftermarket chargers and cables (Anker/third-party wide-range 11V/16V/21V PD-PPS, QC3 Class B 6000mA/3000mA, QC2 2A, DCP 2.4A, and floating-data cables via AICL)
-- Enables full Charge Pump operation (`BQ25970` / `LN8000`) with Adaptive Fast-Ramp boost, automatic PD FFC activation, and accurate adapter `current_max` / Turbo Charge reporting on AOSP custom ROMs (crDroid) and MIUI
+- The fast-charge driver (`/sys/kernel/fast_charge/force_fast_charge`) defaults to `1`, locking `FCC` to `6,000,000 uA` (6A) while keeping the Charge Pump active up to 100% battery capacity.
+- Dynamic `USB_ICL` control remains intact during hardware APSD detection, QC3 500 mA pulse negotiation, and 50 mA main-charger shutdown so VBUS does not collapse on plug-in.
+- Aftermarket chargers and third-party cables work across Anker and wide-range 11V, 16V, and 21V PD-PPS adapters, QC3 Class B (6000 mA battery / 3000 mA bus), QC2 (2A), DCP (2.4A), and floating-data cables via AICL.
+- Both `BQ25970` and `LN8000` Charge Pumps use faster ramp intervals (80 ms pre-ramp and 200 to 250 ms active current tuning), activate PD FFC automatically on AOSP ROMs without `batterysecret`, and report adapter `current_max` and Turbo Charge status accurately on crDroid and MIUI.
 - Switchable Fuel Gauge profiles via `/sys/e404/batt_profile` or `e404_args`:
   - `0` (`batt_def`): OEM battery (`5160 mAh`)
   - `1` (`batt_6k`): `6000 mAh` custom profile (Default)
@@ -74,7 +74,7 @@ Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Turbo Charge 6A (u
 - Lowers `schedutil` rate limit to `1000 us` (1 ms) for 120Hz frame pacing, enables Prime core touch boost in `cpu-boost`, and enables `CONFIG_IRQ_SBALANCE=y`
 
 ### 6. Built-in `e404` CLI Fetch Tool
-Flashing either AnyKernel3 zip installs the `e404` POSIX/mksh script automatically into available paths (`/data/adb/ksu/bin`, `/data/adb/magisk`, Termux `usr/bin`, or `/data/local/tmp`). Run `e404` in Termux or MT Manager Terminal to view CPU usage and cluster clocks, Adreno 640 GPU load and frequency, RAM and ZRAM compression ratios, Wi-Fi IP/MAC, battery telemetry, TCP congestion control, Deep Sleep status, and MGLRU status.
+Flashing either AnyKernel3 zip installs the `e404` POSIX/mksh script automatically into available paths (`/data/adb/ksu/bin`, `/data/adb/magisk`, Termux `usr/bin`, or `/data/local/tmp`). Run `e404` in Termux or MT Manager Terminal to view CPU usage and cluster clocks, Adreno 640 GPU load and frequency, RAM and ZRAM compression ratios, Wi-Fi IP/MAC, battery telemetry, TCP congestion control, and MGLRU status.
 
 ---
 
