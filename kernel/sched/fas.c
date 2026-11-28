@@ -52,6 +52,9 @@ static struct delayed_work fas_cmdbatch_boost_rem;
 static u64 fas_last_input_time;
 static u64 fas_last_cmdbatch_time;
 static unsigned int fas_active_fps;
+static bool fas_input_active;
+static bool fas_cmdbatch_active;
+static bool fas_big_boosted;
 
 #define FAS_MIN_INPUT_INTERVAL (150 * USEC_PER_MSEC)
 
@@ -88,28 +91,33 @@ static inline void fas_update_policy_online(void)
 	put_online_cpus();
 }
 
-static void fas_set_boost_min(unsigned int fps)
+static void fas_set_boost_min(unsigned int fps, bool boost_big_prime)
 {
 	unsigned int i;
-
-#ifdef CONFIG_E404_ATTRIBUTES
-	if (!e404_data.fas)
-		return;
-#endif
 
 	for_each_possible_cpu(i) {
 		struct fas_cpu_sync *s = &per_cpu(fas_sync_info, i);
 
 		if (fps <= 90) {
 			/*
-			 * for refresh rate less than 90hz, boost little core mildly
+			 * Mild boost for 75-90Hz: Little 1.40 GHz; Big/Prime 825.6 MHz on touch
 			 */
-			s->boost_min = (i <= 3) ? 1401600 : 0;
+			if (i <= 3)
+				s->boost_min = 1401600;
+			else
+				s->boost_min = boost_big_prime ? 825600 : 0;
 		} else {
 			/*
-			 * for any refresh rate higher than 90, maximize little core
+			 * 120Hz boost: maximize Little (1.80 GHz) and boost Big/Prime on touch
 			 */
-			s->boost_min = (i <= 3) ? 1804800 : 0;
+			if (i <= 3)
+				s->boost_min = 1804800;
+			else if (!boost_big_prime)
+				s->boost_min = 0;
+			else if (i <= 6)
+				s->boost_min = 940800;
+			else
+				s->boost_min = 1056000;
 		}
 	}
 }
@@ -122,41 +130,61 @@ static void fas_clear_boost_min(void)
 		per_cpu(fas_sync_info, i).boost_min = 0;
 }
 
-static void fas_do_input_boost_rem(struct work_struct *work)
+static void fas_apply_boost(unsigned int fps)
 {
-	if (delayed_work_pending(&fas_cmdbatch_boost_rem))
+	bool enabled = true;
+	bool want_big;
+
+#ifdef CONFIG_E404_ATTRIBUTES
+	enabled = !!e404_data.fas;
+#endif
+
+	if (!enabled || (!fas_input_active && !fas_cmdbatch_active) || fps <= 60) {
+		if (!fas_active_fps)
+			return;
+		fas_clear_boost_min();
+		fas_active_fps = 0;
+		fas_big_boosted = false;
+		fas_update_policy_online();
+		return;
+	}
+
+	/* Keep Big and Prime cores boosted only during touch windows, not every GPU batch */
+	want_big = fas_input_active;
+	if (fps == fas_active_fps && want_big == fas_big_boosted)
 		return;
 
-	fas_clear_boost_min();
-	fas_active_fps = 0;
+	fas_active_fps = fps;
+	fas_big_boosted = want_big;
+	fas_set_boost_min(fps, want_big);
 	fas_update_policy_online();
+}
+
+static void fas_do_input_boost_rem(struct work_struct *work)
+{
+	fas_input_active = false;
+	fas_apply_boost(fas_active_fps);
 }
 
 static void fas_do_cmdbatch_boost_rem(struct work_struct *work)
 {
-	if (delayed_work_pending(&fas_input_boost_rem))
-		return;
-
-	fas_clear_boost_min();
+	fas_cmdbatch_active = false;
 	fas_last_cmdbatch_time = 0;
-	fas_active_fps = 0;
-	fas_update_policy_online();
+	fas_apply_boost(fas_active_fps);
 }
 
 static void fas_do_input_boost(struct work_struct *work)
 {
 	unsigned int fps = dsi_panel_get_refresh_rate();
 
-	if (fps <= 60)
+	if (fps <= 60) {
+		fas_input_active = false;
+		fas_apply_boost(fps);
 		return;
-
-	if (fps != fas_active_fps) {
-		fas_active_fps = fps;
-		cancel_delayed_work(&fas_input_boost_rem);
-		fas_set_boost_min(fps);
-		fas_update_policy_online();
 	}
 
+	fas_input_active = true;
+	fas_apply_boost(fps);
 	mod_delayed_work(fas_wq, &fas_input_boost_rem,
 			 msecs_to_jiffies(fas_input_boost_ms));
 }
@@ -168,8 +196,11 @@ static void fas_do_cmdbatch_boost_work_fn(struct work_struct *work)
 	u64 interval;
 	unsigned int window_ms;
 
-	if (fps <= 60)
+	if (fps <= 60) {
+		fas_cmdbatch_active = false;
+		fas_apply_boost(fps);
 		return;
+	}
 
 	interval = fas_last_cmdbatch_time ?
 		   now - fas_last_cmdbatch_time : 0;
@@ -184,13 +215,8 @@ static void fas_do_cmdbatch_boost_work_fn(struct work_struct *work)
 		window_ms = FAS_ADAPTIVE_MIN_MS;
 	}
 
-	if (fps != fas_active_fps) {
-		fas_active_fps = fps;
-		cancel_delayed_work(&fas_cmdbatch_boost_rem);
-		fas_set_boost_min(fps);
-		fas_update_policy_online();
-	}
-
+	fas_cmdbatch_active = true;
+	fas_apply_boost(fps);
 	mod_delayed_work(fas_wq, &fas_cmdbatch_boost_rem,
 			 msecs_to_jiffies(window_ms));
 }
@@ -302,7 +328,7 @@ void fas_do_cmdbatch_boost(void)
 
 static int fas_init(void)
 {
-	fas_wq = alloc_workqueue("fas_wq", WQ_HIGHPRI, 0);
+	fas_wq = alloc_workqueue("fas_wq", WQ_HIGHPRI, 1);
 	if (!fas_wq)
 		return -EFAULT;
 

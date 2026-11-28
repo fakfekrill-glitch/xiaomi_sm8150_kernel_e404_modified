@@ -71,10 +71,10 @@ Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Turbo Charge 6A (u
 ### 5. Networking, Storage, and 120Hz Tuning
 - Sets `bbrplus` as the default TCP congestion algorithm (`bbr` and `westwood` also built in) paired with `fq` as the default qdisc (`CONFIG_DEFAULT_NET_SCH="fq"`), TCP Fast Open enabled (`client | server`), and `sysctl_tcp_slow_start_after_idle = 0`
 - Enables F2FS compression with `LZO`, `LZ4`, and `ZSTD`
-- Lowers `schedutil` rate limit to `1000 us` (1 ms) for 120Hz frame pacing, enables Prime core touch boost in `cpu-boost`, and enables `CONFIG_IRQ_SBALANCE=y`
+- Lowers `schedutil` rate limit to `1000 us` (1 ms) for 120Hz frame pacing, adds Big and Prime core touch boost to `FAS` (Frame Aware Scaling) at 90Hz and 120Hz while keeping `CONFIG_CPU_BOOST` disabled to avoid duplicate input handlers, and enables `CONFIG_IRQ_SBALANCE=y`
 
 ### 6. Built-in `e404` CLI Fetch Tool
-Flashing either AnyKernel3 zip installs the `e404` POSIX/mksh script automatically into available paths (`/data/adb/ksu/bin`, `/data/adb/magisk`, Termux `usr/bin`, or `/data/local/tmp`). Run `e404` in Termux or MT Manager Terminal to view CPU usage and cluster clocks, Adreno 640 GPU load and frequency, RAM and ZRAM compression ratios, Wi-Fi IP/MAC, battery telemetry, TCP congestion control, and MGLRU status.
+Flashing either AnyKernel3 zip installs the `e404` POSIX/mksh script automatically into available paths (`/data/adb/ksu/bin`, `/data/adb/magisk`, Termux `usr/bin`, or `/data/local/tmp`). Run `e404` in Termux (or `su -c /data/adb/ksu/bin/e404` in MT Manager Terminal) to view CPU usage and cluster clocks, Adreno 640 GPU load and frequency, RAM and ZRAM compression ratios, Wi-Fi IP/MAC, battery telemetry, live charging mode (`Turbo`/`Flash`/`Fast`/`Normal`, USB `real_type`, active adapter `ICL`, and wattage estimate), `FastChg`, `FAS`, TCP congestion control, and MGLRU status.
 
 ---
 

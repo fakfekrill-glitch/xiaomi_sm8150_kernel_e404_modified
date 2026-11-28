@@ -177,15 +177,62 @@ if [ -n "$BAT_FULL" ] && [ -n "$BAT_DESIGN" ] && [ "$BAT_DESIGN" -gt 0 ] 2>/dev/
     fi
 fi
 
-# Kernel Features Status
+# Charging & Kernel Features Status
+FORCE_FC=$(read_val /sys/kernel/fast_charge/force_fast_charge)
+case "$FORCE_FC" in
+    1) FC_STR="6A" ;;
+    0) FC_STR="Stock" ;;
+    *) FC_STR="N/A" ;;
+esac
+
+FAS_EN=$(read_val /sys/kernel/e404/fas)
+case "$FAS_EN" in
+    1) FAS_STR="On" ;;
+    0) FAS_STR="Off" ;;
+    *) FAS_STR="N/A" ;;
+esac
+
+USB_ONLINE=$(read_val /sys/class/power_supply/usb/online)
+USB_TYPE=$(read_val /sys/class/power_supply/usb/real_type)
+QC_TYPE=$(read_val /sys/class/power_supply/usb/quick_charge_type)
+USB_ICL=$(read_val /sys/class/power_supply/usb/current_max)
+
+case "$QC_TYPE" in
+    3) QC_STR="Turbo" ;;
+    2) QC_STR="Flash" ;;
+    1) QC_STR="Fast" ;;
+    0) QC_STR="Normal" ;;
+    *) QC_STR="Standard" ;;
+esac
+
+BAT_PWR=""
+if [ -n "$BAT_VOLT_RAW" ] && [ -n "$BAT_CURR_RAW" ]; then
+    BAT_VOLT_MV=$((BAT_VOLT_RAW / 1000))
+    BAT_CURR_MA=$((BAT_CURR_RAW / 1000))
+    BAT_CURR_ABS=${BAT_CURR_MA#-}
+    if [ "$BAT_VOLT_MV" -gt 0 ] 2>/dev/null; then
+        BAT_MW=$(((BAT_VOLT_MV * BAT_CURR_ABS) / 1000))
+        BAT_PWR="$((BAT_MW / 1000)).$(((BAT_MW % 1000) / 100))W"
+    fi
+fi
+
+if [ "$USB_ONLINE" = "1" ] || [ "$BAT_STATUS" = "Charging" ]; then
+    ICL_STR=""
+    if [ -n "$USB_ICL" ] && [ "$USB_ICL" -gt 0 ] 2>/dev/null; then
+        ICL_STR=" | ICL: $((USB_ICL / 1000)) mA"
+    fi
+    TYPE_STR=""
+    [ -n "$USB_TYPE" ] && [ "$USB_TYPE" != "Unknown" ] && TYPE_STR=" (${USB_TYPE})"
+    PWR_STR=""
+    [ -n "$BAT_PWR" ] && PWR_STR=" | ~${BAT_PWR}"
+    CHG_STR="${QC_STR}${TYPE_STR}${ICL_STR}${PWR_STR}"
+else
+    CHG_STR="Unplugged"
+    [ -n "$BAT_PWR" ] && CHG_STR="${CHG_STR} (~${BAT_PWR} draw)"
+fi
+
 TCP_CC=$(read_val /proc/sys/net/ipv4/tcp_congestion_control)
 [ -z "$TCP_CC" ] && TCP_CC="N/A"
-WL_BLK=$(read_val /sys/module/wakeup/parameters/enable_wakelock_blocker)
-if [ "$WL_BLK" = "Y" ] || [ "$WL_BLK" = "1" ]; then
-    WL_STR="Active"
-else
-    WL_STR="Off"
-fi
 MGLRU=$(read_val /sys/kernel/mm/lru_gen/enabled)
 case "$MGLRU" in
     "") MGLRU_STR="N/A" ;;
@@ -205,5 +252,6 @@ printf '%s\n' \
     "                            ${W}IP Addr :${N} ${IP_ADDR}" \
     "                            ${W}MAC Addr:${N} ${MAC_ADDR}" \
     "                            ${W}Battery :${N} ${BAT_CAP:-?}% (${BAT_STATUS:-?}, ${BAT_HEALTH:-?}) ${BAT_TEMP} | ${BAT_VOLT} | ${BAT_CURR} mA${BAT_LIFE}" \
-    "                            ${W}Tuning  :${N} TCP=${TCP_CC} | DeepSleep=${WL_STR} | MGLRU=${MGLRU_STR}" \
+    "                            ${W}Charging:${N} ${CHG_STR}" \
+    "                            ${W}Tuning  :${N} TCP=${TCP_CC} | FastChg=${FC_STR} | FAS=${FAS_STR} | MGLRU=${MGLRU_STR}" \
     ""
