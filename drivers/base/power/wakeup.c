@@ -33,8 +33,62 @@ static char blocked_wakelocks[MAX_BLOCKED_WAKELOCKS_LEN] =
 static bool enable_wakelock_blocker = true;
 static DEFINE_SPINLOCK(wakelock_blocker_lock);
 
+static void wakelock_blocker_set_list(const char *buf, size_t count)
+{
+	size_t len = min_t(size_t, count, MAX_BLOCKED_WAKELOCKS_LEN - 1);
+	unsigned long flags;
+
+	spin_lock_irqsave(&wakelock_blocker_lock, flags);
+	memcpy(blocked_wakelocks, buf, len);
+	blocked_wakelocks[len] = '\0';
+	while (len > 0 && (blocked_wakelocks[len - 1] == '\n' ||
+			   blocked_wakelocks[len - 1] == '\r' ||
+			   blocked_wakelocks[len - 1] == ' '  ||
+			   blocked_wakelocks[len - 1] == '\t'))
+		blocked_wakelocks[--len] = '\0';
+	spin_unlock_irqrestore(&wakelock_blocker_lock, flags);
+}
+
+static int wakelock_blocker_get_list(char *buf)
+{
+	unsigned long flags;
+	int ret;
+
+	spin_lock_irqsave(&wakelock_blocker_lock, flags);
+	ret = scnprintf(buf, PAGE_SIZE, "%s\n", blocked_wakelocks);
+	spin_unlock_irqrestore(&wakelock_blocker_lock, flags);
+
+	return ret;
+}
+
+static int blocked_wakelocks_param_set(const char *val,
+				       const struct kernel_param *kp)
+{
+	size_t len = strlen(val);
+
+	if (len >= MAX_BLOCKED_WAKELOCKS_LEN) {
+		pr_err("%s: string doesn't fit in %u chars.\n",
+		       kp->name, MAX_BLOCKED_WAKELOCKS_LEN - 1);
+		return -ENOSPC;
+	}
+	wakelock_blocker_set_list(val, len);
+	return 0;
+}
+
+static int blocked_wakelocks_param_get(char *buffer,
+				       const struct kernel_param *kp)
+{
+	return wakelock_blocker_get_list(buffer);
+}
+
+static const struct kernel_param_ops blocked_wakelocks_param_ops = {
+	.set = blocked_wakelocks_param_set,
+	.get = blocked_wakelocks_param_get,
+};
+
 module_param_named(enable_wakelock_blocker, enable_wakelock_blocker, bool, 0644);
-module_param_string(blocked_wakelocks, blocked_wakelocks, sizeof(blocked_wakelocks), 0644);
+module_param_cb(blocked_wakelocks, &blocked_wakelocks_param_ops,
+		blocked_wakelocks, 0644);
 
 static bool is_wakelock_blocked(const char *name)
 {
@@ -1235,33 +1289,14 @@ postcore_initcall(wakeup_sources_debugfs_init);
 static ssize_t boeffla_wakelock_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	unsigned long flags;
-	ssize_t ret;
-
-	spin_lock_irqsave(&wakelock_blocker_lock, flags);
-	ret = scnprintf(buf, PAGE_SIZE, "%s\n", blocked_wakelocks);
-	spin_unlock_irqrestore(&wakelock_blocker_lock, flags);
-
-	return ret;
+	return wakelock_blocker_get_list(buf);
 }
 
 static ssize_t boeffla_wakelock_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
-	size_t len = min_t(size_t, count, MAX_BLOCKED_WAKELOCKS_LEN - 1);
-	unsigned long flags;
-
-	spin_lock_irqsave(&wakelock_blocker_lock, flags);
-	memcpy(blocked_wakelocks, buf, len);
-	blocked_wakelocks[len] = '\0';
-	while (len > 0 && (blocked_wakelocks[len - 1] == '\n' ||
-			   blocked_wakelocks[len - 1] == '\r' ||
-			   blocked_wakelocks[len - 1] == ' '  ||
-			   blocked_wakelocks[len - 1] == '\t'))
-		blocked_wakelocks[--len] = '\0';
-	spin_unlock_irqrestore(&wakelock_blocker_lock, flags);
-
+	wakelock_blocker_set_list(buf, count);
 	return count;
 }
 

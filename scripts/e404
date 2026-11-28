@@ -187,7 +187,11 @@ else
     WL_STR="Off"
 fi
 MGLRU=$(read_val /sys/kernel/mm/lru_gen/enabled)
-[ -n "$MGLRU" ] && MGLRU_STR="Enabled ($MGLRU)" || MGLRU_STR="N/A"
+case "$MGLRU" in
+    "") MGLRU_STR="N/A" ;;
+    "0x0000"|"0") MGLRU_STR="Disabled ($MGLRU)" ;;
+    *) MGLRU_STR="Enabled ($MGLRU)" ;;
+esac
 
 printf '%s\n' \
     "" \
