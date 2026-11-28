@@ -61,8 +61,8 @@
 
 
 
-#define BATT_MAX_CHG_VOLT		4400
-#define BATT_FAST_CHG_CURR		5400
+#define BATT_MAX_CHG_VOLT		4450
+#define BATT_FAST_CHG_CURR		6000
 #define	BUS_OVP_THRESHOLD		12000
 #define	BUS_OVP_ALARM_THRESHOLD		9500
 
@@ -610,20 +610,20 @@ static int cp_flash2_charge(unsigned int port)
 	if (!pm_state.batt_cell_volt_triggered) {
 		cp_get_batt_capacity();
 		if (pm_state.bq2597x.vbat_volt >= 4200 || pm_state.capacity > 29) {
-			sys_config.ibus_minus_deviation_val = 550;
+			sys_config.ibus_minus_deviation_val = 300;
 			sys_config.ibus_plus_deviation_val = 200;
-			sys_config.ibat_minus_deviation_val = 1050;
-			sys_config.ibat_plus_deviation_val = 50;
+			sys_config.ibat_minus_deviation_val = 450;
+			sys_config.ibat_plus_deviation_val = 250;
 			pm_state.batt_cell_volt_triggered = true;
 			pr_info("batt cell volt > 4200mv or batt soc > 29%%, modify bq qc3 adjust parameters\n");
 		}
 	}
 
-	if (pm_state.bq2597x.vbus_volt <= 9500
+	if (pm_state.bq2597x.vbus_volt <= 10500
 		&& pm_state.bq2597x.ibus_curr < ibus_limit-sys_config.ibus_minus_deviation_val
 		&& !pm_state.bq2597x.bus_ocp_alarm
 		&& !pm_state.bq2597x.bus_ovp_alarm
-		&& pm_state.bq2597x.vbat_volt < sys_config.bat_volt_lp_lmt - 50
+		&& pm_state.bq2597x.vbat_volt < sys_config.bat_volt_lp_lmt - 20
 		&& pm_state.bq2597x.ibat_curr < ibat_limit - sys_config.ibat_minus_deviation_val) {
 			cp_tune_vbus_volt(VOLT_UP);
 		}
@@ -767,7 +767,7 @@ void cp_statemachine(unsigned int port)
 			} else if (pm_state.bq2597x.vbat_volt < sys_config.min_vbat_start_flash2) {
 				cp_move_state(CP_STATE_SW_ENTRY);
 			} else if (pm_state.capacity >= HIGH_CAPACITY_TRH
-					|| pm_state.bq2597x.vbat_volt >= sys_config.bat_volt_lp_lmt) {
+					&& pm_state.bq2597x.vbat_volt >= sys_config.bat_volt_lp_lmt) {
 				pm_state.sw_near_cv = true;
 				cp_move_state(CP_STATE_SW_ENTRY);
 			} else {
@@ -817,7 +817,7 @@ void cp_statemachine(unsigned int port)
 		}
 		cp_get_batt_capacity();
 		if (pm_state.capacity >= HIGH_CAPACITY_TRH
-					|| pm_state.bq2597x.vbat_volt >= sys_config.bat_volt_lp_lmt) {
+					&& pm_state.bq2597x.vbat_volt >= sys_config.bat_volt_lp_lmt) {
 				pm_state.sw_near_cv = true;
 		}
 		if (!pm_state.sw_near_cv && !recovery) {

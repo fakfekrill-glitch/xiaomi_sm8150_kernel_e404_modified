@@ -57,9 +57,10 @@ Built with ReSukiSU (BakaSU v4.2.0-rc3), SuSFS v1.5.5, MGLRU, Turbo Charge 6A (u
 - Fixes `sucompat` `faccessat` and `stat` user-pointer handling on non-GKI 4.14 kernels and uses heap allocations in `fs/susfs/` to avoid ThinLTO stack overflow warnings
 
 ### 4. Fast Charging (6A Turbo Charge to 100%) and Battery Profiles
-- Fast charge override (`/sys/kernel/fast_charge/force_fast_charge`) active by default (`1`), forcing `FCC` to `6,000,000 uA` (6A) all the way up to 100% battery capacity without premature CV tapering or early Charge Pump exit
+- Fast charge override (`/sys/kernel/fast_charge/force_fast_charge`) active by default (`1`), forcing `FCC` up to `6,000,000 uA` (6A) while keeping Charge Pump active up to 100% battery capacity
 - Preserves dynamic `USB_ICL` hardware APSD and QC3 500mA voltage negotiation, preventing VBUS collapse on plug-in
-- Enables full Charge Pump operation (`BQ25970` / `LN8000`) and reports authentic Turbo/Flash Charge status across both AOSP and MIUI
+- Enables universal compatibility for aftermarket chargers and cables (Anker/third-party wide-range 11V/16V/21V PD-PPS, QC3 Class B 6000mA/3000mA, QC2 2A, DCP 2.4A, and floating-data cables via AICL)
+- Enables full Charge Pump operation (`BQ25970` / `LN8000`) with automatic PD FFC activation and accurate adapter `current_max` / Turbo Charge reporting on AOSP custom ROMs (crDroid) and MIUI
 - Switchable Fuel Gauge profiles via `/sys/e404/batt_profile` or `e404_args`:
   - `0` (`batt_def`): OEM battery (`5160 mAh`)
   - `1` (`batt_6k`): `6000 mAh` custom profile (Default)

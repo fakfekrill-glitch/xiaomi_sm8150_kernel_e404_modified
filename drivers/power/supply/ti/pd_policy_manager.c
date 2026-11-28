@@ -682,10 +682,11 @@ static void usbpd_pm_evaluate_src_caps(struct usbpd_pm *pdpm)
 	for (i = 0; i < PDO_MAX_NUM; i++) {
 		if (pdpm->pdo[i].type == PD_SRC_PDO_TYPE_AUGMENTED
 			&& pdpm->pdo[i].pps && pdpm->pdo[i].pos) {
-			if (pdpm->pdo[i].max_volt_mv >= pdpm->apdo_max_volt
-					&& pdpm->pdo[i].curr_ma >= pdpm->apdo_max_curr
-					&& pdpm->pdo[i].max_volt_mv <= APDO_MAX_VOLT) {
-				pdpm->apdo_max_volt = pdpm->pdo[i].max_volt_mv;
+			if (pdpm->pdo[i].min_volt_mv <= 7000
+					&& pdpm->pdo[i].max_volt_mv >= pdpm->apdo_max_volt
+					&& pdpm->pdo[i].curr_ma >= pdpm->apdo_max_curr) {
+				pdpm->apdo_max_volt = min_t(int,
+						pdpm->pdo[i].max_volt_mv, APDO_MAX_VOLT);
 				pdpm->apdo_max_curr = pdpm->pdo[i].curr_ma;
 				pdpm->apdo_selected_pdo = pdpm->pdo[i].pos;
 				pdpm->pps_supported = true;
@@ -698,8 +699,6 @@ static void usbpd_pm_evaluate_src_caps(struct usbpd_pm *pdpm)
 				pdpm->apdo_selected_pdo,
 				pdpm->apdo_max_volt,
 				pdpm->apdo_max_curr);
-		if (pdpm->apdo_max_curr <= LOW_POWER_PPS_CURR_THR)
-			pdpm->apdo_max_curr = XIAOMI_LOW_POWER_PPS_CURR_MAX;
 		pval.intval = (pdpm->apdo_max_volt / 1000) * (pdpm->apdo_max_curr / 1000);
 		power_supply_set_property(pdpm->usb_psy,
 				POWER_SUPPLY_PROP_APDO_MAX, &pval);

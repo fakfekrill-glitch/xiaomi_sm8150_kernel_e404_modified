@@ -86,15 +86,14 @@ enum pm_state {
 #define LOW_POWER_PPS_CURR_THR			2000
 #define XIAOMI_LOW_POWER_PPS_CURR_MAX			1500
 #define XIAOMI_LOW_POWER_PPS_CURR_MAX			1500
-#define PPS_VOL_MAX			11000
-#define PPS_VOL_HYS			1000
-
 #define STEP_MV			20
 #define TAPER_VOL_HYS			80
 #define TAPER_WITH_IBUS_HYS			60
 #define TAPER_IBUS_THR			450
 #define BQ_TAPER_HYS_MV			10
 #define BQ_TAPER_DECREASE_STEP_MA			200
+#define PPS_VOL_MAX			11000
+#define PPS_VOL_HYS			500
 struct sw_device {
 	bool charge_enabled;
 	bool charge_limited;
